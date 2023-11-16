@@ -108,24 +108,13 @@ u32 cheatIsUnlocked(s32 cheat_id)
 	u32 unlocked = 0;
 
 	if (cheat->flags & CHEATFLAG_FIRINGRANGE) {
-		if (frIsClassicWeaponUnlocked(cheat->time)) {
 			unlocked++;
-		}
 	} else if (cheat->flags & CHEATFLAG_COMPLETION) {
-		if (g_GameFile.besttimes[cheat->stage_index][0]) {
 			unlocked++;
-		}
-		if (g_GameFile.besttimes[cheat->stage_index][1]) {
 			unlocked++;
-		}
-		if (g_GameFile.besttimes[cheat->stage_index][2]) {
 			unlocked++;
-		}
 	} else {
-		if (g_GameFile.besttimes[cheat->stage_index][cheat->difficulty] &&
-				g_GameFile.besttimes[cheat->stage_index][cheat->difficulty] <= cheat->time) {
 			unlocked++;
-		}
 	}
 
 	if ((cheat->flags & CHEATFLAG_TRANSFERPAK) && gamefileHasFlag(GAMEFILEFLAG_USED_TRANSFERPAK)) {
