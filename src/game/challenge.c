@@ -97,33 +97,7 @@ void challengeDetermineUnlockedFeatures(void)
 
 	// Mark challenges completed by any player
 	for (challengeindex = 0; challengeindex < ARRAYCOUNT(g_MpChallenges); challengeindex++) {
-		flag = 0;
-
-		if (challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex, 1)
-				|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex, 2)
-				|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex, 3)
-				|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex, 4)) {
-			// Completed challenge
-			flag = 1;
-		} else if (challengeindex < 4) {
-			// Not yet completed, but challenges 1-4 are always available
-			flag = 1;
-			numgifted++;
-		} else if (challengeindex > 0
-				&& (challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex - 1, 1)
-					|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex - 1, 2)
-					|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex - 1, 3)
-					|| challengeIsCompletedByAnyPlayerWithNumPlayers(challengeindex - 1, 4))) {
-			// Challenges are available if their previous one is complete
-			flag = 1;
-			numgifted++;
-		}
-#ifdef DEBUG
-		else if (debugIsAllChallengesEnabled()) {
-			flag = 1;
-		}
-#endif
-
+		flag = 1;
 		g_MpChallenges[challengeindex].availability |= flag;
 	}
 
@@ -213,10 +187,7 @@ void challengeDetermineUnlockedFeatures(void)
 
 	for (j = 0; j < func0f188bcc(); j++) {
 		struct mpweapon *weapon = &g_MpWeapons[j];
-
-		if (weapon->unlockfeature > 0 && func0f19cbcc(weapon->weaponnum)) {
-			g_MpFeaturesUnlocked[weapon->unlockfeature] |= 1;
-		}
+		g_MpFeaturesUnlocked[weapon->unlockfeature] |= 1;
 	}
 
 	func0f1895e8();
