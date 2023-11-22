@@ -1161,6 +1161,8 @@ void gfx_opengl_copy_framebuffer(int fb_dst, int fb_src, int left, int top, bool
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[current_framebuffer].fbo);
 
+    glReadBuffer(GL_BACK);
+
     glEnable(GL_SCISSOR_TEST);
 }
 

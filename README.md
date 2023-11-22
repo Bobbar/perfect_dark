@@ -29,7 +29,10 @@ There are minor graphics- and gameplay-related issues, and possibly occasional c
 * 60 FPS support, including fixes for some framerate-related issues;
 * fixes for a couple original bugs and crashes;
 * basic mod support, currently enough to load a few custom levels;
-* slightly expanded memory heap size.
+* slightly expanded memory heap size;
+* experimental uncapped framerate support:
+  * set `Game.TickRateDivisor` to `0` in `pd.ini` to activate;
+  * in practice the game will have issues running faster than ~150 FPS, so use VSync or `Video.FramerateLimit` to cap it.
 
 Currently only 32-bit platforms are supported, namely x86 Windows and Linux.  
 Note that 32-bit binaries will still work on 64-bit versions of those platforms,

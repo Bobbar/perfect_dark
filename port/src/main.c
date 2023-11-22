@@ -37,6 +37,8 @@ u8 g_VmShowStats = 0;
 
 s32 g_TickRateDiv = 1;
 
+s32 g_SkipIntro = false;
+
 extern s32 g_StageNum;
 
 s32 bootGetMemSize(void)
@@ -122,7 +124,17 @@ int main(int argc, const char **argv)
 	sysLogPrintf(LOG_NOTE, "rom  file at %p - %p", g_RomFile, g_RomFile + g_RomFileSize);
 
 	g_SndDisabled = sysArgCheck("--no-sound");
+
 	g_StageNum = sysArgGetInt("--boot-stage", STAGE_TITLE);
+
+	if (g_StageNum == STAGE_TITLE && (sysArgCheck("--skip-intro") || g_SkipIntro)) {
+		// shorthand for --boot-stage 0x26
+		g_StageNum = STAGE_CITRAINING;
+	} else if (g_StageNum < 0x01 || g_StageNum > 0x5d) {
+		// stage num out of range
+		g_StageNum = STAGE_TITLE;
+	}
+
 	if (g_StageNum != STAGE_TITLE) {
 		sysLogPrintf(LOG_NOTE, "boot stage set to 0x%02x", g_StageNum);
 	}
@@ -138,6 +150,7 @@ PD_CONSTRUCTOR static void gameConfigInit(void)
 	configRegisterInt("Game.CenterHUD", &g_HudCenter, 0, 1);
 	configRegisterFloat("Game.ScreenShakeIntensity", &g_ViShakeIntensityMult, 0.f, 10.f);
 	configRegisterInt("Game.TickRateDivisor", &g_TickRateDiv, 0, 10);
+	configRegisterInt("Game.SkipIntro", &g_SkipIntro, 0, 1);
 	for (s32 j = 0; j < MAX_PLAYERS; ++j) {
 		const s32 i = j + 1;
 		configRegisterFloat(strFmt("Game.Player%d.FovY", i), &g_PlayerExtCfg[j].fovy, 5.f, 175.f);
