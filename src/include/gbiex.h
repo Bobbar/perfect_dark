@@ -198,13 +198,14 @@
 
 /* G_EXTRAGEOMETRYMODE flags */
 
-#define G_INVERT_CULLING_EXT 0x00000001
-#define G_ASPECT_LEFT_EXT    0x00000010
-#define G_ASPECT_RIGHT_EXT   0x00000020
-#define G_ASPECT_CENTER_EXT  (G_ASPECT_LEFT_EXT | G_ASPECT_RIGHT_EXT)
-#define G_ASPECT_MODE_EXT    G_ASPECT_CENTER_EXT
-#define G_NO_CLIPPING_EXT    0x00000040
-#define G_MODULATE_EXT       0x00000080 // this should really go into OTHERMODE_H, but for some reason I can't get it to work
+#define G_INVERT_CULLING_EXT     0x00000001
+#define G_ASPECT_LEFT_EXT        0x00000010
+#define G_ASPECT_RIGHT_EXT       0x00000020
+#define G_ASPECT_WIDE_EXT        0x00000040
+#define G_ASPECT_CENTER_EXT      (G_ASPECT_LEFT_EXT | G_ASPECT_RIGHT_EXT)
+#define G_ASPECT_MODE_EXT        (G_ASPECT_CENTER_EXT | G_ASPECT_WIDE_EXT)
+#define G_NO_CLIPPING_EXT        0x00000100
+#define G_MODULATE_EXT           0x00000200 // this should really go into OTHERMODE_H, but for some reason I can't get it to work
 
 /* Extended command macros */
 

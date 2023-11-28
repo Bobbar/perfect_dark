@@ -1087,7 +1087,8 @@ void joyGetContpadNumsForPlayer(s8 playernum, s32 *pad1, s32 *pad2)
 
 	*pad1 = playernum;
 
-	if (g_PlayerConfigsArray[g_Vars.playerstats[playernum].mpindex].controlmode >= CONTROLMODE_21) {
+	u8 controlmode = g_PlayerConfigsArray[g_Vars.playerstats[playernum].mpindex].controlmode;
+	if (controlmode >= CONTROLMODE_21 && controlmode < CONTROLMODE_PC) {
 		*pad2 = PLAYERCOUNT() + playernum;
 		return;
 	}

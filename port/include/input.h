@@ -5,6 +5,7 @@
 #include <PR/os_cont.h>
 
 #define INPUT_MAX_CONTROLLERS MAXCONTROLLERS
+#define INPUT_MAX_CONNECTED_CONTROLLERS 8
 #define INPUT_MAX_CONTROLLER_BUTTONS 32
 #define INPUT_MAX_BINDS 4
 
@@ -83,29 +84,51 @@ enum contkey {
 // returns bitmask of connected controllers or -1 if failed
 s32 inputInit(void);
 
+// read the specified player's inputs into the N64 pad struct
 // returns 0 if read, non-0 if failed
 s32 inputReadController(s32 idx, OSContPad *npad);
 
-// returns 1 if rumble is supported for specified controller
+// returns 1 if rumble is supported for specified player's controller
 s32 inputRumbleSupported(s32 idx);
 
-// returns 1 if specified controller is connected
+// returns 1 if specified player has a live controller assigned
 s32 inputControllerConnected(s32 idx);
 
-// returns bitmask of connected controllers
+// returns bitmask of players with assigned controllers
 s32 inputControllerMask(void);
 
+// get/set Input.Player%d.SwapSticks
 s32 inputControllerGetSticksSwapped(s32 cidx);
 void inputControllerSetSticksSwapped(s32 cidx, s32 swapped);
 
+// get/set Input.Player%d.StickCButtons (DualAnalog is 1 if StickCButtons is 0)
 s32 inputControllerGetDualAnalog(s32 cidx);
 void inputControllerSetDualAnalog(s32 cidx, s32 enable);
 
+// get/set sensitivity for a given player
 f32 inputControllerGetAxisScale(s32 cidx, s32 stick, s32 axis);
 void inputControllerSetAxisScale(s32 cidx, s32 stick, s32 axis, f32 value);
 
+// get/set deadzone for a given player
 f32 inputControllerGetAxisDeadzone(s32 cidx, s32 stick, s32 axis);
 void inputControllerSetAxisDeadzone(s32 cidx, s32 stick, s32 axis, f32 value);
+
+// writes array of up to INPUT_MAX_CONNECTED_CONTROLLERS controller IDs
+// for all the controllers available on this machine into out if it's not NULL
+// returns number of IDs that would've been written (or were written if out is not NULL)
+s32 inputGetConnectedControllers(s32 *out);
+
+// get name of connected controller id
+// returns "Invalid" on failure
+const char *inputGetConnectedControllerName(s32 id);
+
+// get id of the controller currently assigned to player cidx or -1 if none
+s32 inputGetAssignedControllerId(s32 cidx);
+
+// assign connected controller id to player cidx
+// if id is -1, unassigns controller from player, if any
+// returns true on success, false on failure
+s32 inputAssignController(s32 cidx, s32 id);
 
 // vk is a value from the virtkey enum above
 s32 inputKeyPressed(u32 vk);
@@ -169,11 +192,14 @@ void inputUpdate(void);
 // call this before configSave()
 void inputSaveBinds(void);
 
-void inputSetDefaultKeyBinds(void);
+// reset given player's binds to either PC or N64 defaults
+void inputSetDefaultKeyBinds(s32 cidx, s32 n64mode);
 
+// clear or get the last pressed button
 void inputClearLastKey(void);
 s32 inputGetLastKey(void);
 
+// get/set Input.MouseDefaultLocked
 s32 inputGetMouseDefaultLocked(void);
 void inputSetMouseDefaultLocked(s32 defaultLocked);
 

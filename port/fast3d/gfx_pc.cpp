@@ -860,12 +860,17 @@ static void import_texture(int i, int tile, bool importReplacement) {
 
     if (rdp.tex_lod || !loaded_texture.addr) {
         // set up miplevel 0; also acts as a catch-all for when .addr is NULL because my texture loader sucks
+        loaded_texture.addr = rdp.texture_to_load.addr;
         loaded_texture.line_size_bytes = rdp.texture_tile[tile].line_size_bytes;
         loaded_texture.full_image_line_size_bytes = rdp.texture_tile[tile].line_size_bytes;
         loaded_texture.full_size_bytes = loaded_texture.full_image_line_size_bytes * rdp.texture_tile[tile].height;
         loaded_texture.size_bytes = loaded_texture.line_size_bytes * rdp.texture_tile[tile].height;
+        if (siz == G_IM_SIZ_32b) {
+            // HACK: fixup 32-bit LODed texture height
+            loaded_texture.size_bytes <<= 1;
+            loaded_texture.full_size_bytes <<= 1;
+        }
         loaded_texture.orig_size_bytes = loaded_texture.size_bytes;
-        loaded_texture.addr = rdp.texture_to_load.addr;
     }
 
     const RawTexMetadata* metadata = &loaded_texture.raw_tex_metadata;
@@ -1641,13 +1646,23 @@ static void gfx_sp_geometry_mode(uint32_t clear, uint32_t set) {
 }
 
 static inline void gfx_update_aspect_mode(void) {
+    const uint32_t side = rsp.aspect_mode & G_ASPECT_CENTER_EXT;
+
     rsp.aspect_scale = rsp.aspect_mode ? (4.f / 3.f) : gfx_current_window_dimensions.aspect_ratio;
-    if (rsp.aspect_mode == G_ASPECT_LEFT_EXT) {
+
+    if (side == G_ASPECT_LEFT_EXT) {
         rsp.aspect_ofs = 1.f - 3.f * gfx_current_dimensions.aspect_ratio / 4.f;
-    } else if (rsp.aspect_mode == G_ASPECT_RIGHT_EXT) {
+    } else if (side == G_ASPECT_RIGHT_EXT) {
         rsp.aspect_ofs = 3.f * gfx_current_dimensions.aspect_ratio / 4.f - 1.f;
     } else {
         rsp.aspect_ofs = 0.f;
+    }
+
+    if (side && (rsp.aspect_mode & G_ASPECT_WIDE_EXT)) {
+        constexpr float c = 16.f / 9.f;
+        if (gfx_current_dimensions.aspect_ratio > c) {
+            rsp.aspect_ofs *= c / gfx_current_dimensions.aspect_ratio;
+        }
     }
 }
 

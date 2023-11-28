@@ -281,6 +281,9 @@ void nbombReset(struct nbomb *nbomb)
 #if VERSION >= VERSION_PAL_BETA
 	nbomb->radius = 0;
 #endif
+#ifndef PLATFORM_N64
+	nbomb->spawnframe240 = g_Vars.lvframe240;
+#endif
 }
 
 /**
@@ -523,9 +526,14 @@ void nbombTick(struct nbomb *nbomb)
 {
 	if (nbomb->age240 >= 0) {
 		s32 age60;
+#ifdef PLATFORM_N64
 		s32 increment = (g_Vars.lvupdate240 + 2) >> 2;
-
 		nbomb->age240 += increment;
+#else
+		s32 oldage240 = nbomb->age240;
+		nbomb->age240 = (g_Vars.lvframe240 - nbomb->spawnframe240) >> 2;
+		s32 increment = nbomb->age240 - oldage240;
+#endif
 
 		if (nbomb->age240 < TICKS(80)) {
 			nbomb->radius = nbomb->age240 / (PAL ? 66.0f : 80.0f);

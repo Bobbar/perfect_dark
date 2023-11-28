@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <PR/ultratypes.h>
@@ -489,6 +490,12 @@ static MenuItemHandlerResult menuhandlerVibration(s32 operation, struct menuitem
 	case MENUOP_SET:
 		inputRumbleSetStrength(g_ExtMenuPlayer, (f32)data->slider.value / 10.f);
 		break;
+	case MENUOP_CHECKHIDDEN:
+	case MENUOP_CHECKDISABLED:
+		if (!inputRumbleSupported(g_ExtMenuPlayer)) {
+			return true;
+		}
+		break;
 	}
 
 	return 0;
@@ -520,7 +527,57 @@ static MenuItemHandlerResult menuhandlerSwapSticks(s32 operation, struct menuite
 	return 0;
 }
 
+static MenuItemHandlerResult menuhandlerController(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	static char ctrlname[35];
+	s32 ctrls[INPUT_MAX_CONNECTED_CONTROLLERS];
+	const s32 numCtrls = inputGetConnectedControllers(ctrls);
+	const s32 curCtrl = inputGetAssignedControllerId(g_ExtMenuPlayer);
+
+	switch (operation) {
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = numCtrls + 1; // first option is "None"
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		if (data->dropdown.value) {
+			const s32 jid = ctrls[data->dropdown.value - 1];
+			const char *name = inputGetConnectedControllerName(jid);
+			strncpy(ctrlname, name, sizeof(ctrlname) - 1);
+			return (intptr_t)ctrlname;
+		} else {
+			return (intptr_t)"None";
+		}
+	case MENUOP_SET:
+		if (data->dropdown.value == 0) {
+			// unassign controller
+			inputAssignController(g_ExtMenuPlayer, -1);
+		} else if (data->dropdown.value <= numCtrls) {
+			inputAssignController(g_ExtMenuPlayer, ctrls[data->dropdown.value - 1]);
+		}
+		break;
+	case MENUOP_GETSELECTEDINDEX:
+		for (s32 i = 0; i < numCtrls; ++i) {
+			if (curCtrl == ctrls[i]) {
+				data->dropdown.value = i + 1;
+				return 0;
+			}
+		}
+		data->dropdown.value = 0;
+		break;
+	}
+
+	return 0;
+}
+
 struct menuitem g_ExtendedControllerMenuItems[] = {
+	{
+		MENUITEMTYPE_DROPDOWN,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Controller",
+		0,
+		menuhandlerController,
+	},
 	{
 		MENUITEMTYPE_CHECKBOX,
 		0,
@@ -623,19 +680,33 @@ static MenuItemHandlerResult menuhandlerTexFilter2D(s32 operation, struct menuit
 
 static MenuItemHandlerResult menuhandlerCenterHUD(s32 operation, struct menuitem *item, union handlerdata *data)
 {
+	static const char *opts[] = {
+		"None",
+		"4:3",
+		"Wide"
+	};
+
 	switch (operation) {
-	case MENUOP_GET:
-		return g_HudCenter;
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = ARRAYCOUNT(opts);
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		return (intptr_t)opts[data->dropdown.value];
 	case MENUOP_SET:
 		g_HudCenter = data->checkbox.value;
-		if (g_HudCenter) {
+		if (g_HudCenter == HUDCENTER_NORMAL) {
 			g_HudAlignModeL = G_ASPECT_CENTER_EXT;
 			g_HudAlignModeR = G_ASPECT_CENTER_EXT;
-		} else {
+		} else if (g_HudCenter == HUDCENTER_WIDE) {
+			g_HudAlignModeL = G_ASPECT_LEFT_EXT | G_ASPECT_WIDE_EXT;
+			g_HudAlignModeR = G_ASPECT_RIGHT_EXT | G_ASPECT_WIDE_EXT;
+		}	else {
 			g_HudAlignModeL = G_ASPECT_LEFT_EXT;
 			g_HudAlignModeR = G_ASPECT_RIGHT_EXT;
 		}
 		break;
+	case MENUOP_GETSELECTEDINDEX:
+		data->dropdown.value = g_HudCenter;
 	}
 
 	return 0;
@@ -681,10 +752,10 @@ struct menuitem g_ExtendedVideoMenuItems[] = {
 		menuhandlerTexFilter2D,
 	},
 	{
-		MENUITEMTYPE_CHECKBOX,
+		MENUITEMTYPE_DROPDOWN,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Center HUD",
+		(uintptr_t)"HUD Centering",
 		0,
 		menuhandlerCenterHUD,
 	},
@@ -724,6 +795,81 @@ struct menudialogdef g_ExtendedVideoMenuDialog = {
 	NULL,
 };
 
+static MenuItemHandlerResult menuhandlerDisableMpDeathMusic(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	switch (operation) {
+	case MENUOP_GET:
+		return g_MusicDisableMpDeath;
+	case MENUOP_SET:
+		g_MusicDisableMpDeath = data->checkbox.value;
+		break;
+	}
+
+	return 0;
+}
+
+struct menuitem g_ExtendedAudioMenuItems[] = {
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Disable MP Death Music",
+		0,
+		menuhandlerDisableMpDeathMusic,
+	},
+	{
+		MENUITEMTYPE_SEPARATOR,
+		0,
+		0,
+		0,
+		0,
+		NULL,
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_SELECTABLE_CLOSESDIALOG,
+		L_OPTIONS_213, // "Back"
+		0,
+		NULL,
+	},
+	{ MENUITEMTYPE_END },
+};
+
+struct menudialogdef g_ExtendedAudioMenuDialog = {
+	MENUDIALOGTYPE_DEFAULT,
+	(uintptr_t)"Extended Audio Options",
+	g_ExtendedAudioMenuItems,
+	NULL,
+	MENUDIALOGFLAG_LITERAL_TEXT,
+	NULL,
+};
+
+static MenuItemHandlerResult menuhandlerCrouchMode(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	static const char *opts[] = {
+		"Hold",
+		"Analog",
+		"Toggle",
+		"Toggle + Analog"
+	};
+
+	switch (operation) {
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = ARRAYCOUNT(opts);
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		return (intptr_t)opts[data->dropdown.value];
+	case MENUOP_SET:
+		g_PlayerExtCfg[g_ExtMenuPlayer].crouchmode = data->dropdown.value;
+		break;
+	case MENUOP_GETSELECTEDINDEX:
+		data->dropdown.value = g_PlayerExtCfg[g_ExtMenuPlayer].crouchmode;
+	}
+
+	return 0;
+}
+
 static MenuItemHandlerResult menuhandlerFieldOfView(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	switch (operation) {
@@ -737,19 +883,6 @@ static MenuItemHandlerResult menuhandlerFieldOfView(s32 operation, struct menuit
 				g_PlayerExtCfg[g_ExtMenuPlayer].fovzoommult = g_PlayerExtCfg[g_ExtMenuPlayer].fovy / 60.f;
 			}
 		}
-		break;
-	}
-
-	return 0;
-}
-
-static MenuItemHandlerResult menuhandlerClassicCrouch(s32 operation, struct menuitem *item, union handlerdata *data)
-{
-	switch (operation) {
-	case MENUOP_GET:
-		return g_PlayerExtCfg[g_ExtMenuPlayer].classiccrouch;
-	case MENUOP_SET:
-		g_PlayerExtCfg[g_ExtMenuPlayer].classiccrouch = data->checkbox.value;
 		break;
 	}
 
@@ -772,12 +905,12 @@ static MenuItemHandlerResult menuhandlerCrosshairSway(s32 operation, struct menu
 
 struct menuitem g_ExtendedGameMenuItems[] = {
 	{
-		MENUITEMTYPE_CHECKBOX,
+		MENUITEMTYPE_DROPDOWN,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Allow Classic Crouch",
+		(uintptr_t)"Crouch Mode",
 		0,
-		menuhandlerClassicCrouch,
+		menuhandlerCrouchMode,
 	},
 	{
 		MENUITEMTYPE_SLIDER,
@@ -874,27 +1007,35 @@ struct menudialogdef g_ExtendedBindKeyMenuDialog = {
 struct menubind {
 	u32 ck;
 	const char *name;
+	const char *n64name;
 };
 
 static const struct menubind menuBinds[] = {
-	{ CK_ZTRIG,  "Fire [ZT]\n" },
-	{ CK_LTRIG,  "Fire Mode [LT]\n" },
-	{ CK_RTRIG,  "Aim Mode [RT]\n" },
-	{ CK_A,      "Use / Accept [A]\n" },
-	{ CK_B,      "Use / Cancel [B]\n" },
-	{ CK_X,      "Reload [X]\n" },
-	{ CK_Y,      "Next Weapon [Y]\n" },
-	{ CK_DPAD_L, "Prev Weapon [DL]\n" },
-	{ CK_DPAD_D, "Radial Menu [DD]\n" },
-	{ CK_START,  "Pause Menu [ST]\n" },
-	{ CK_8000,   "Cycle Crouch [+]\n" },
-	{ CK_4000,   "Half Crouch [+]\n" },
-	{ CK_2000,   "Full Crouch [+]\n" },
+	{ CK_ZTRIG,  "Fire [ZT]\n",         "N64 Z Trigger\n" },
+	{ CK_LTRIG,  "Fire Mode [LT]\n",    "N64 L Trigger\n"},
+	{ CK_RTRIG,  "Aim Mode [RT]\n",     "N64 R Trigger\n" },
+	{ CK_A,      "Use / Accept [A]\n",  "N64 A Button\n" },
+	{ CK_B,      "Use / Cancel [B]\n",  "N64 B Button\n" },
+	{ CK_START,  "Pause Menu [ST]\n",   "N64 Start\n" },
+	{ CK_DPAD_U, "D-Pad Up [DU]\n",     "N64 D-Pad Up\n" },
+	{ CK_DPAD_R, "D-Pad Right [DR]\n",  "N64 D-Pad Right\n" },
+	{ CK_DPAD_L, "Prev Weapon [DL]\n",  "N64 D-Pad Left\n" },
+	{ CK_DPAD_D, "Radial Menu [DD]\n",  "N64 D-Pad Down\n" },
+	{ CK_C_U,    "Forward [CU]\n",      "N64 C-Up\n" },
+	{ CK_C_D,    "Backward [CD]\n",     "N64 C-Down\n" },
+	{ CK_C_R,    "Strafe Right [CR]\n", "N64 C-Right\n" },
+	{ CK_C_L,    "Strafe Left [CL]\n",  "N64 C-Left\n" },
+	{ CK_X,      "Reload [X]\n",        "N64 Ext X\n" },
+	{ CK_Y,      "Next Weapon [Y]\n",   "N64 Ext Y\n" },
+	{ CK_8000,   "Cycle Crouch [+]\n",  "N64 Ext 8000\n" },
+	{ CK_4000,   "Half Crouch [+]\n",   "N64 Ext 4000\n" },
+	{ CK_2000,   "Full Crouch [+]\n",   "N64 Ext 2000\n" },
 };
 
 static const char *menutextBind(struct menuitem *item);
 static MenuItemHandlerResult menuhandlerBind(s32 operation, struct menuitem *item, union handlerdata *data);
-static MenuItemHandlerResult menuhandlerResetBinds(s32 operation, struct menuitem *item, union handlerdata *data);
+static MenuItemHandlerResult menuhandlerResetBindsPC(s32 operation, struct menuitem *item, union handlerdata *data);
+static MenuItemHandlerResult menuhandlerResetBindsN64(s32 operation, struct menuitem *item, union handlerdata *data);
 
 #define DEFINE_MENU_BIND() \
 	{ \
@@ -920,6 +1061,12 @@ struct menuitem g_ExtendedBindsMenuItems[] = {
 	DEFINE_MENU_BIND(),
 	DEFINE_MENU_BIND(),
 	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
 	{
 		MENUITEMTYPE_SEPARATOR,
 		0,
@@ -932,9 +1079,17 @@ struct menuitem g_ExtendedBindsMenuItems[] = {
 		MENUITEMTYPE_SELECTABLE,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Reset to Defaults\n",
+		(uintptr_t)"Reset to PC Defaults\n",
 		0,
-		menuhandlerResetBinds,
+		menuhandlerResetBindsPC,
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Reset to N64 Defaults\n",
+		0,
+		menuhandlerResetBindsN64,
 	},
 	{
 		MENUITEMTYPE_SEPARATOR,
@@ -977,7 +1132,9 @@ static MenuItemHandlerResult menuhandlerDoBind(s32 operation, struct menuitem *i
 
 static const char *menutextBind(struct menuitem *item)
 {
-	return menuBinds[item - g_ExtendedBindsMenuItems].name;
+	return g_PlayerExtCfg[g_ExtMenuPlayer].extcontrols ?
+		menuBinds[item - g_ExtendedBindsMenuItems].name :
+		menuBinds[item - g_ExtendedBindsMenuItems].n64name;
 }
 
 static MenuItemHandlerResult menuhandlerBind(s32 operation, struct menuitem *item, union handlerdata *data)
@@ -1015,10 +1172,19 @@ static MenuItemHandlerResult menuhandlerBind(s32 operation, struct menuitem *ite
 	return 0;
 }
 
-static MenuItemHandlerResult menuhandlerResetBinds(s32 operation, struct menuitem *item, union handlerdata *data)
+static MenuItemHandlerResult menuhandlerResetBindsPC(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	if (operation == MENUOP_SET) {
-		inputSetDefaultKeyBinds();
+		inputSetDefaultKeyBinds(g_ExtMenuPlayer, false);
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerResetBindsN64(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	if (operation == MENUOP_SET) {
+		inputSetDefaultKeyBinds(g_ExtMenuPlayer, true);
 	}
 
 	return 0;
@@ -1061,83 +1227,6 @@ static MenuItemHandlerResult menuhandlerOpenBindsMenu(s32 operation, struct menu
 	return 0;
 }
 
-static MenuItemHandlerResult menuhandlerUnlockEverything(s32 operation, struct menuitem *item, union handlerdata *data)
-{
-	if (operation == MENUOP_SET) {
-		gamefileUnlockEverything();
-	}
-	return 0;
-}
-
-struct menuitem g_ConfirmUnlockMenuItems[] = {
-	{
-		MENUITEMTYPE_LABEL,
-		0,
-		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Are you sure?\n\nThis will overwrite any progress\nsaved to the current profile.\n",
-		0,
-		NULL,
-	},
-	{
-		MENUITEMTYPE_SEPARATOR,
-		0,
-		0,
-		0x00000082,
-		0,
-		NULL,
-	},
-	{
-		MENUITEMTYPE_MARQUEE,
-		0,
-		MENUITEMFLAG_SMALLFONT | MENUITEMFLAG_MARQUEE_FADEBOTHSIDES | MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Unlocks all cheats, weapons, missions, challenges and combat simulator items.\n",
-		0,
-		NULL,
-	},
-	{
-		MENUITEMTYPE_SEPARATOR,
-		0,
-		0,
-		0x00000082,
-		0,
-		NULL,
-	},
-	{
-		MENUITEMTYPE_SELECTABLE,
-		0,
-		MENUITEMFLAG_SELECTABLE_CENTRE | MENUITEMFLAG_SELECTABLE_CLOSESDIALOG,
-		L_OPTIONS_191, // "No"
-		0,
-		NULL,
-	},
-	{
-		MENUITEMTYPE_SELECTABLE,
-		0,
-		MENUITEMFLAG_SELECTABLE_CENTRE | MENUITEMFLAG_SELECTABLE_CLOSESDIALOG,
-		L_OPTIONS_190, // "Yes"
-		0,
-		menuhandlerUnlockEverything,
-	},
-	{ MENUITEMTYPE_END },
-};
-
-struct menudialogdef g_ConfirmUnlockMenuDialog = {
-	MENUDIALOGTYPE_DANGER,
-	L_OPTIONS_188, // "Warning"
-	g_ConfirmUnlockMenuItems,
-	NULL,
-	0,
-	NULL,
-};
-
-static MenuItemHandlerResult menuhandlerUnlockEverythingPrompt(s32 operation, struct menuitem *item, union handlerdata *data)
-{
-	if (operation == MENUOP_SET) {
-		menuPushDialog(&g_ConfirmUnlockMenuDialog);
-	}
-	return 0;
-}
-
 struct menuitem g_ExtendedMenuItems[] = {
 	{
 		MENUITEMTYPE_SELECTABLE,
@@ -1146,6 +1235,14 @@ struct menuitem g_ExtendedMenuItems[] = {
 		(uintptr_t)"Video\n",
 		0,
 		(void *)&g_ExtendedVideoMenuDialog,
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_SELECTABLE_OPENSDIALOG | MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Audio\n",
+		0,
+		(void *)&g_ExtendedAudioMenuDialog,
 	},
 	{
 		MENUITEMTYPE_SELECTABLE,
@@ -1178,14 +1275,6 @@ struct menuitem g_ExtendedMenuItems[] = {
 		(uintptr_t)"Key Bindings\n",
 		0,
 		menuhandlerOpenBindsMenu,
-	},
-	{
-		MENUITEMTYPE_SELECTABLE,
-		0,
-		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Unlock Everything\n",
-		0,
-		menuhandlerUnlockEverythingPrompt,
 	},
 	{
 		MENUITEMTYPE_SEPARATOR,

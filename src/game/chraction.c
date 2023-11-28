@@ -4478,7 +4478,8 @@ void chrDamage(struct chrdata *chr, f32 damage, struct coord *vector, struct gse
 
 		pakRumble((s8)g_Vars.currentplayernum, 0.25f, -1, -1);
 
-		if (optionsGetControlMode(g_Vars.currentplayerstats->mpindex) >= CONTROLMODE_21) {
+		s32 controlmode = optionsGetControlMode(g_Vars.currentplayerstats->mpindex);
+		if (controlmode >= CONTROLMODE_21 && controlmode < CONTROLMODE_PC) {
 			pakRumble((s8)(PLAYERCOUNT() + g_Vars.currentplayernum), 0.25f, -1, -1);
 		}
 #endif

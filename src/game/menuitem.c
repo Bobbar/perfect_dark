@@ -4097,7 +4097,7 @@ Gfx *menuitemControllerRenderText(Gfx *gdl, s32 curmode, struct menurendercontex
 #endif
 
 		// For the 2.x styles, only labels 4-7 are shown
-		if (curmode < CONTROLMODE_21 || (i >= 4 && i <= 7)) {
+		if ((curmode < CONTROLMODE_21 || curmode == CONTROLMODE_PC) || (i >= 4 && i <= 7)) {
 			// Rendering a label such as "L/R BUTTONS:"
 			rx = context->x + padx + 76;
 #if VERSION < VERSION_NTSC_1_0
@@ -4117,7 +4117,7 @@ Gfx *menuitemControllerRenderText(Gfx *gdl, s32 curmode, struct menurendercontex
 			// during development the second player in the 2.x styles had to
 			// choose their control style separately to player 1, in which case
 			// there would have been 2.5, 2.6, 2.7 and 2.8 for player 2.
-			if (curmode > CONTROLMODE_24) {
+			if (curmode > CONTROLMODE_24 && curmode != CONTROLMODE_PC) {
 				if (textnum == menuitemControllerGetButtonAction(prevmode + 4, i)) {
 					colour = labelcolour;
 				}
@@ -4128,7 +4128,7 @@ Gfx *menuitemControllerRenderText(Gfx *gdl, s32 curmode, struct menurendercontex
 			}
 		}
 
-		if (curmode >= CONTROLMODE_21 && i == 2) {
+		if (curmode >= CONTROLMODE_21 && curmode < CONTROLMODE_PC && i == 2) {
 			// Rendering a "CONTROLLER 1" or "CONTROLLER 2" heading
 			rx = context->x + padx + 63;
 			colour = labelcolour;
@@ -4157,13 +4157,13 @@ Gfx *menuitemControllerRenderPad(Gfx *gdl, struct menurendercontext *context, s3
 	gdl = menuitemControllerRenderTexture(gdl, rx + 32, ry + 32, 0x36, alpha);
 
 #if VERSION >= VERSION_JPN_FINAL
-	if (curmode >= CONTROLMODE_21) {
+	if (curmode >= CONTROLMODE_21 && curmode < CONTROLMODE_PC) {
 		gdl = menuitemControllerRenderLines(gdl, context, 13, 20, padx, pady, alpha);
 	} else {
 		gdl = menuitemControllerRenderLines(gdl, context, 0, 22, padx, pady, alpha);
 	}
 #else
-	if (curmode >= CONTROLMODE_21) {
+	if (curmode >= CONTROLMODE_21 && curmode < CONTROLMODE_PC) {
 		gdl = menuitemControllerRenderLines(gdl, context, 13, 19, padx, pady, alpha);
 	} else {
 		gdl = menuitemControllerRenderLines(gdl, context, 0, 21, padx, pady, alpha);
@@ -4196,13 +4196,13 @@ Gfx *menuitemControllerRender(Gfx *gdl, struct menurendercontext *context)
 
 	// If changing control group (eg. 1.4 -> 2.1)
 	if (data->controlgroup == 1) {
-		if (g_Menus[g_MpPlayerNum].main.controlmode < CONTROLMODE_21) {
+		if (g_Menus[g_MpPlayerNum].main.controlmode < CONTROLMODE_21 || g_Menus[g_MpPlayerNum].main.controlmode == CONTROLMODE_PC) {
 			data->controlgroup = 2;
 			data->contfadetimer = 0;
 			data->prevmode = -1;
 		}
 	} else {
-		if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21) {
+		if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21 && g_Menus[g_MpPlayerNum].main.controlmode != CONTROLMODE_PC) {
 			data->controlgroup = 1;
 			data->contfadetimer = 0;
 			data->prevmode = -1;
@@ -4252,7 +4252,11 @@ Gfx *menuitemControllerRender(Gfx *gdl, struct menurendercontext *context)
 			g_MenuWave2Colours[dialog->type].item_unfocused,
 			g_MenuWave1Colours[dialog->type].item_unfocused);
 
-	if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21) {
+	if (g_Menus[g_MpPlayerNum].main.controlmode == CONTROLMODE_PC) {
+		sprintf(text, langGet(L_MPWEAPONS_213), // "Control Style %s %s"
+				"Ext",
+				langGet(L_MPWEAPONS_215)); // "(Two-Handed)"
+	} else if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21) {
 		sprintf(text, langGet(L_MPWEAPONS_213), // "Control Style %s %s"
 				langGet(g_ControlStyleOptions[g_Menus[g_MpPlayerNum].main.controlmode]),
 				langGet(L_MPWEAPONS_215)); // "(Two-Handed)"
@@ -4271,7 +4275,21 @@ Gfx *menuitemControllerRender(Gfx *gdl, struct menurendercontext *context)
 	textcolour = colourBlend(colour, colour & 0xffffff00, textalpha);
 	colour = colourBlend(colour, colour & 0xffffff00, contalpha);
 
-	if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21) {
+	if (g_Menus[g_MpPlayerNum].main.controlmode == CONTROLMODE_PC) {
+		x = context->x;
+		y = context->y + 92;
+#if VERSION == VERSION_JPN_FINAL
+		y += 34;
+#endif
+		gdl = text0f153628(gdl);
+		gdl = textRenderProjected(gdl, &x, &y,
+				"PC Port control scheme.\n"
+				"Only change to another control scheme\n"
+				"if you want to use original N64 controls.\n\n"
+				"See Extended Key Bindings for more info.",
+				g_CharsHandelGothicSm, g_FontHandelGothicSm, colour, viGetWidth(), viGetHeight(), 0, 0);
+		gdl = text0f153780(gdl);
+	} else if (g_Menus[g_MpPlayerNum].main.controlmode >= CONTROLMODE_21) {
 		gdl = menuitemControllerRenderPad(gdl, context, 0, VERSION == VERSION_JPN_FINAL ? -4 : 12,
 				g_Menus[g_MpPlayerNum].main.controlmode,
 				contalpha, textcolour, colour, data->prevmode);

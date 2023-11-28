@@ -46,6 +46,10 @@ s32 g_MusicAge60 = 0;           // The current age of the MP track being played
 s32 g_MusicLife60 = TICKS(120); // The max age of any MP track (this value is changed in MP code)
 s32 g_MusicSilenceTimer60 = 0;  // Counts down the 2 second silence between MP track changes
 
+#ifndef PLATFORM_N64
+s32 g_MusicDisableMpDeath = false;
+#endif
+
 #if VERSION < VERSION_NTSC_1_0
 const char var7f1b2030nb[] = "MUSIC : musicPlayLevel\n";
 const char var7f1b2048nb[] = "MUSIC : SWITCHING TO CORRECT AMBIENT TUNE\n";
@@ -516,6 +520,12 @@ void _musicStartMpDeath(f32 arg0)
 
 void musicStartMpDeath(void)
 {
+#ifndef PLATFORM_N64
+	if (g_MusicDisableMpDeath) {
+		return;
+	}
+#endif
+
 #if VERSION >= VERSION_NTSC_1_0
 	musicSaveInterval();
 #endif

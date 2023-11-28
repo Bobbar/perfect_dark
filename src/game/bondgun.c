@@ -250,8 +250,9 @@ void bgunRumble(s32 handnum, s32 weaponnum)
 	bool contpad2hasrumble;
 	s32 contpadtouse1;
 	s32 contpadtouse2;
+	s32 controlmode = optionsGetControlMode(g_Vars.currentplayerstats->mpindex);
 
-	if (optionsGetControlMode(g_Vars.currentplayerstats->mpindex) >= CONTROLMODE_21) {
+	if (controlmode >= CONTROLMODE_21 && controlmode < CONTROLMODE_PC) {
 		contpad1hasrumble = pakGetType(g_Vars.currentplayernum) == PAKTYPE_RUMBLE;
 		contpad2hasrumble = pakGetType(g_Vars.currentplayernum + PLAYERCOUNT()) == PAKTYPE_RUMBLE;
 
@@ -11718,25 +11719,43 @@ void bgunSetTriggerOn(s32 handnum, bool on)
  */
 s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromactivemenu, bool fromdedicatedbutton)
 {
+#ifndef PLATFORM_N64
+	const bool extcontrols = PLAYER_EXTCFG().extcontrols;
+#endif
 	switch (bgunGetWeaponNum(HAND_RIGHT)) {
 	case WEAPON_SNIPERRIFLE:
-		if (usedowntime < 0) {
+		if (extcontrols && usedowntime < 0) {
 			return USETIMER_CONTINUE;
 		}
-		// g_Vars.currentplayer->gunctrl.invertgunfunc = !g_Vars.currentplayer->gunctrl.invertgunfunc;
+
+		// At 25 ticks (or B+Z), start showing the new function
 		g_Vars.currentplayer->gunctrl.invertgunfunc = true;
 
 		// B+Z immediately triggers crouch or stand
 		if (trigpressed) {
-			g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
+			if (extcontrols) {
+				g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
+			}
 			return USETIMER_STOP;
 		}
+
 		if (fromdedicatedbutton) {
 			g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
 			return USETIMER_CONTINUE;
 		}
 
-		if (ABS(usedowntime) < 0) {
+#ifndef PLATFORM_N64
+		bool docontinue;
+		if (extcontrols) {
+			docontinue = (ABS(usedowntime) < 0);
+		} else {
+			// Don't do anything if B hasn't been held for 50/60ths of a second
+			docontinue = (usedowntime < TICKS(50));
+		}
+		if (docontinue) {
+#else
+		if (usedowntime < TICKS(50)) {
+#endif
 			return USETIMER_CONTINUE;
 		}
 
@@ -11746,13 +11765,17 @@ s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromac
 
 		// Do crouch or stand
 		g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
-		return USETIMER_STOP;
+		return (extcontrols ? USETIMER_STOP : USETIMER_REPEAT);
 	case WEAPON_RCP120:
 	case WEAPON_LAPTOPGUN:
 	case WEAPON_DRAGON:
 	case WEAPON_REMOTEMINE:
 		// These weapons use temporary alt functions
-		g_Vars.currentplayer->gunctrl.invertgunfunc = !g_Vars.currentplayer->gunctrl.invertgunfunc;
+		if (extcontrols) {
+			g_Vars.currentplayer->gunctrl.invertgunfunc = !g_Vars.currentplayer->gunctrl.invertgunfunc;
+		} else {
+			g_Vars.currentplayer->gunctrl.invertgunfunc = true;
+		}
 
 		if (fromactivemenu && bgunIsUsingSecondaryFunction() == true) {
 			g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
@@ -11798,16 +11821,20 @@ s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromac
 
 void bgun0f0a8c50(void)
 {
+#ifndef PLATFORM_N64
 	switch (bgunGetWeaponNum(HAND_RIGHT)) {
 	case WEAPON_RCP120:
 	case WEAPON_LAPTOPGUN:
 	case WEAPON_DRAGON:
 	case WEAPON_REMOTEMINE:
-		return;
-	default:
-		if (g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary == false) {
-			g_Vars.currentplayer->gunctrl.invertgunfunc = false;
+		if (PLAYER_EXTCFG().extcontrols) {
+			return;
 		}
+		break;
+	}
+#endif
+	if (g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary == false) {
+		g_Vars.currentplayer->gunctrl.invertgunfunc = false;
 	}
 }
 

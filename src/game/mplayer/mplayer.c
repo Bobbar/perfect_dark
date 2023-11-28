@@ -120,7 +120,8 @@ struct mpweapon g_MpWeapons[NUM_MPWEAPONS] = {
 	.mouseaimspeedy = 0.7f, \
 	.radialmenuspeed = 4.f, \
 	.crosshairsway = 1.f, \
-	.classiccrouch = true, \
+	.crouchmode = CROUCHMODE_TOGGLE_ANALOG, \
+	.extcontrols = true, \
 }
 
 struct extplayerconfig g_PlayerExtCfg[MAX_PLAYERS] = { 
@@ -405,7 +406,13 @@ void mpPlayerSetDefaults(s32 playernum, bool autonames)
 
 	func0f187fbc(playernum);
 
-	g_PlayerConfigsArray[playernum].controlmode = CONTROLMODE_12;
+	g_PlayerConfigsArray[playernum].controlmode = CONTROLMODE_11;
+
+#ifndef PLATFORM_N64
+	if (g_PlayerExtCfg[playernum % MAX_PLAYERS].extcontrols) {
+		g_PlayerConfigsArray[playernum].controlmode = CONTROLMODE_PC;
+	}
+#endif
 
 	g_PlayerConfigsArray[playernum].options =
 #ifdef PLATFORM_N64
@@ -3393,6 +3400,13 @@ void mpplayerfileLoadWad(s32 playernum, struct savebuffer *buffer, s32 arg2)
 	g_PlayerConfigsArray[playernum].controlmode = savebufferReadBits(buffer, 2);
 	g_PlayerConfigsArray[playernum].options = savebufferReadBits(buffer, 12);
 
+#ifndef PLATFORM_N64
+	// override with PC controls if enabled in the config
+	if (g_PlayerExtCfg[playernum % MAX_PLAYERS].extcontrols) {
+		g_PlayerConfigsArray[playernum].controlmode = CONTROLMODE_PC;
+	}
+#endif
+
 	for (i = 0; i < ARRAYCOUNT(g_MpChallenges); i++) {
 		for (j = 1; j < MAX_PLAYERS + 1; j++) {
 			challengeSetCompletedByPlayerWithNumPlayers(playernum, i, j, savebufferReadBits(buffer, 1));
@@ -3523,7 +3537,14 @@ void mpplayerfileSaveWad(s32 playernum, struct savebuffer *buffer)
 
 	savebufferOr(buffer, g_PlayerConfigsArray[playernum].survivormedals, 16);
 
+#ifdef PLATFORM_N64
 	savebufferOr(buffer, g_PlayerConfigsArray[playernum].controlmode, 2);
+#else
+	// PC control mode is enabled in the .ini to avoid changing the save structure
+	const u32 controlmode = g_PlayerConfigsArray[playernum].controlmode;
+	savebufferOr(buffer, ((controlmode == CONTROLMODE_PC) ? CONTROLMODE_11 : controlmode), 2);
+#endif
+
 	savebufferOr(buffer, g_PlayerConfigsArray[playernum].options, 12);
 
 	for (i = 0; i < ARRAYCOUNT(g_MpChallenges); i++) {

@@ -5072,8 +5072,8 @@ struct movedata {
 	/*0xa0*/ s32 analogpitch;
 	/*0xa4*/ s32 analogstrafe;
 	/*0xa8*/ s32 analogwalk;
-	/*0xac*/ s32 alt1tapcount;
 #ifndef PLATFORM_N64
+	/*0xac*/ s32 alt1tapcount;
 	/*    */ f32 freelookdx; // how much the mouse moved ...
 	/*    */ f32 freelookdy; // ... scaled by sensitivity
 	/*    */ f32 analoglean; // how much we're trying to lean
@@ -5510,6 +5510,9 @@ struct nbomb {
 	struct prop *ownerprop;
 	struct sndstate *audiohandle20;
 	struct sndstate *audiohandle24;
+#ifndef PLATFORM_N64
+	s32 spawnframe240; // spawned on this frame
+#endif
 };
 
 struct roomacousticdata {
@@ -6132,9 +6135,10 @@ struct extplayerconfig {
 	s32 mouseaimmode;
 	f32 mouseaimspeedx;
 	f32 mouseaimspeedy;
-	s32 classiccrouch;
+	s32 crouchmode;
 	f32 radialmenuspeed;
 	f32 crosshairsway;
+	s32 extcontrols;
 };
 
 #endif

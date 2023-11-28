@@ -988,6 +988,7 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 #if VERSION >= VERSION_NTSC_1_0
 	bool vsplit = false;
 #endif
+	u32 umask, dmask, lmask, rmask;
 
 #if VERSION >= VERSION_PAL_FINAL
 #if PAL
@@ -1017,6 +1018,18 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 		vsplit = true;
 	}
 #endif
+
+	if (optionsGetControlMode(g_Vars.currentplayerstats->mpindex) == CONTROLMODE_PC) {
+		umask = U_CBUTTONS;
+		dmask = D_CBUTTONS;
+		lmask = L_CBUTTONS;
+		rmask = R_CBUTTONS;
+	} else {
+		umask = U_JPAD | U_CBUTTONS;
+		dmask = D_JPAD | D_CBUTTONS;
+		lmask = L_JPAD | L_CBUTTONS;
+		rmask = R_JPAD | R_CBUTTONS;
+	}
 
 #if VERSION >= VERSION_NTSC_1_0
 	movex = chr->prop->pos.x - chr->prevpos.x;
@@ -1403,32 +1416,32 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			// Up
 			if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_CAMSPY) {
 				brightness = 20; \
-				if (buttonsdown & (U_CBUTTONS)) { \
+				if (buttonsdown & umask) { \
 					brightness += 20; \
 				} \
-				if (buttonsthisframe & (U_CBUTTONS)) { \
+				if (buttonsthisframe & umask) { \
 					brightness += 20; \
 				} \
 				gDPSetPrimColor(gdl++, 0, 0, 0, brightness, 0, 0xff); \
 			} else if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_DRUGSPY) {
 				brightness = 127;
 
-				if (buttonsdown & (U_CBUTTONS)) {
+				if (buttonsdown & umask) {
 					brightness += 63;
 				}
 
-				if (buttonsthisframe & (U_CBUTTONS)) {
+				if (buttonsthisframe & umask) {
 					brightness += 63; \
 				} \
 				gDPSetPrimColor(gdl++, 0, 0, 0x10, 0x20, brightness, 0xff);
 			} else {
 				brightness = 20;
 
-				if (buttonsdown & (U_CBUTTONS)) {
+				if (buttonsdown & umask) {
 					brightness += 20;
 				}
 
-				if (buttonsthisframe & (U_CBUTTONS)) {
+				if (buttonsthisframe & umask) {
 					brightness += 20; \
 				} \
 				gDPSetPrimColor(gdl++, 0, 0, brightness, brightness >> 2, 0, 0xff);
@@ -1441,10 +1454,10 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_CAMSPY) {
 				brightness = 20;
 
-				if (buttonsdown & (D_CBUTTONS)) { \
+				if (buttonsdown & dmask) { \
 					brightness += 20; \
 				} \
-				if (buttonsthisframe & (D_CBUTTONS)) {
+				if (buttonsthisframe & dmask) {
 					brightness += 20;
 				}
 
@@ -1452,11 +1465,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_DRUGSPY) {
 				brightness = 127;
 
-				if (buttonsdown & (D_CBUTTONS)) {
+				if (buttonsdown & dmask) {
 					brightness += 63;
 				}
 
-				if (buttonsthisframe & (D_CBUTTONS)) {
+				if (buttonsthisframe & dmask) {
 					brightness += 63;
 				}
 
@@ -1464,11 +1477,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else {
 				brightness = 20;
 
-				if (buttonsdown & (D_CBUTTONS)) {
+				if (buttonsdown & dmask) {
 					brightness += 20;
 				}
 
-				if (buttonsthisframe & (D_CBUTTONS)) {
+				if (buttonsthisframe & dmask) {
 					brightness += 20;
 				}
 
@@ -1482,10 +1495,10 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_CAMSPY) {
 				brightness = 20;
 
-				if (buttonsdown & (L_CBUTTONS)) { \
+				if (buttonsdown & lmask) { \
 					brightness += 20; \
 				} \
-				if (buttonsthisframe & (L_CBUTTONS)) {
+				if (buttonsthisframe & lmask) {
 					brightness += 20;
 				}
 
@@ -1493,11 +1506,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_DRUGSPY) {
 				brightness = 127;
 
-				if (buttonsdown & (L_CBUTTONS)) {
+				if (buttonsdown & lmask) {
 					brightness += 63;
 				}
 
-				if (buttonsthisframe & (L_CBUTTONS)) {
+				if (buttonsthisframe & lmask) {
 					brightness += 63;
 				}
 
@@ -1505,11 +1518,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else {
 				brightness = 20;
 
-				if (buttonsdown & (L_CBUTTONS)) {
+				if (buttonsdown & lmask) {
 					brightness += 20;
 				}
 
-				if (buttonsthisframe & (L_CBUTTONS)) {
+				if (buttonsthisframe & lmask) {
 					brightness += 20;
 				}
 
@@ -1523,10 +1536,10 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_CAMSPY) {
 				brightness = 20;
 
-				if (buttonsdown & (R_CBUTTONS)) { \
+				if (buttonsdown & rmask) { \
 					brightness += 20; \
 				} \
-				if (buttonsthisframe & (R_CBUTTONS)) {
+				if (buttonsthisframe & rmask) {
 					brightness += 20;
 				}
 
@@ -1534,11 +1547,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else if (g_Vars.currentplayer->eyespy->mode == EYESPYMODE_DRUGSPY) {
 				brightness = 127;
 
-				if (buttonsdown & (R_CBUTTONS)) {
+				if (buttonsdown & rmask) {
 					brightness += 63;
 				}
 
-				if (buttonsthisframe & (R_CBUTTONS)) {
+				if (buttonsthisframe & rmask) {
 					brightness += 63;
 				}
 
@@ -1546,11 +1559,11 @@ Gfx *bviewDrawEyespyMetrics(Gfx *gdl)
 			} else {
 				brightness = 20;
 
-				if (buttonsdown & (R_CBUTTONS)) {
+				if (buttonsdown & rmask) {
 					brightness += 20;
 				}
 
-				if (buttonsthisframe & (R_CBUTTONS)) {
+				if (buttonsthisframe & rmask) {
 					brightness += 20;
 				}
 

@@ -720,8 +720,21 @@ void eyespyProcessInput(bool allowbuttons)
 	s32 contpad2;
 	u32 stack[5];
 	f32 tmp;
+	u32 umask, dmask, lmask, rmask;
 
-	if (controlmode >= CONTROLMODE_21) {
+	if (controlmode == CONTROLMODE_PC) {
+		umask = U_CBUTTONS;
+		dmask = D_CBUTTONS;
+		lmask = L_CBUTTONS;
+		rmask = R_CBUTTONS;
+	} else {
+		umask = U_JPAD | U_CBUTTONS;
+		dmask = D_JPAD | D_CBUTTONS;
+		lmask = L_JPAD | L_CBUTTONS;
+		rmask = R_JPAD | R_CBUTTONS;
+	}
+
+	if (controlmode >= CONTROLMODE_21 && controlmode < CONTROLMODE_PC) {
 		contpad2 = (s8) optionsGetContpadNum2(g_Vars.currentplayerstats->mpindex);
 		c2stickx = joyGetStickX(contpad2);
 		c2sticky = joyGetStickY(contpad2);
@@ -729,11 +742,15 @@ void eyespyProcessInput(bool allowbuttons)
 		c2buttons = allowbuttons ? joyGetButtons(contpad2, 0xffffffff) : 0;
 	} else {
 #ifndef PLATFORM_N64
-		c2stickx = joyGetRStickX(contpad1);
-		c2sticky = joyGetRStickY(contpad1);
+		if (controlmode == CONTROLMODE_PC) {
+			c2stickx = joyGetRStickX(contpad1);
+			c2sticky = joyGetRStickY(contpad1);
+		} else
 #else
-		c2stickx = c1stickx;
-		c2sticky = c1sticky;
+		{
+			c2stickx = c1stickx;
+			c2sticky = c1sticky;
+		}
 #endif
 		c2buttons = c1buttons;
 	}
@@ -743,16 +760,19 @@ void eyespyProcessInput(bool allowbuttons)
 		shootpressed = c1buttons & A_BUTTON;
 		exitpressed = c1buttons & R_TRIG;
 		activatepressed = c1buttons & B_BUTTON;
-	} else if (controlmode <= CONTROLMODE_14) {
+	} else if (controlmode <= CONTROLMODE_14 || controlmode == CONTROLMODE_PC) {
 		aimpressed = c1buttons & (R_TRIG);
 		shootpressed = c1buttons & Z_TRIG;
-#ifdef PLATFORM_N64
-		exitpressed = (c1buttons | c2buttons) & A_BUTTON;
-		activatepressed = (c1buttons | c2buttons) & B_BUTTON;
-#else
-		exitpressed = (c1buttons | c2buttons) & (BUTTON_WPNBACK | BUTTON_RADIAL);
-		activatepressed = (c1buttons | c2buttons) & (BUTTON_CANCEL_USE | BUTTON_ACCEPT_USE);
+#ifndef PLATFORM_N64
+		if (controlmode == CONTROLMODE_PC) {
+			exitpressed = c1buttons & (BUTTON_WPNBACK | BUTTON_RADIAL);
+			activatepressed = c1buttons & (BUTTON_CANCEL_USE | BUTTON_ACCEPT_USE);
+		} else
 #endif
+		{
+			exitpressed = (c1buttons | c2buttons) & A_BUTTON;
+			activatepressed = (c1buttons | c2buttons) & B_BUTTON;
+		}
 	} else {
 		if (controlmode >= CONTROLMODE_23) {
 			aimpressed = c1buttons & Z_TRIG;
@@ -829,23 +849,25 @@ void eyespyProcessInput(bool allowbuttons)
 			forwardspeed = c1sticky;
 		}
 
-		ascendspeed = (c1buttons & (U_CBUTTONS) ? 1 : 0) - (c1buttons & (D_CBUTTONS) ? 1 : 0);
-		sidespeed = (c1buttons & (R_CBUTTONS) ? 1 : 0) - (c1buttons & (L_CBUTTONS) ? 1 : 0);
-	} else if (controlmode <= CONTROLMODE_14) {
+		ascendspeed = (c1buttons & (U_CBUTTONS | U_JPAD) ? 1 : 0) - (c1buttons & (D_CBUTTONS | D_JPAD) ? 1 : 0);
+		sidespeed = (c1buttons & (R_CBUTTONS | R_JPAD) ? 1 : 0) - (c1buttons & (L_CBUTTONS | L_JPAD) ? 1 : 0);
+	} else if (controlmode <= CONTROLMODE_14 || controlmode == CONTROLMODE_PC) {
 		if (aimpressed) {
 			domovecentre = false;
 			pitchspeed = c1sticky;
 		} else {
 			ascendspeed = c1sticky * 0.25f;
-			forwardspeed = (c1buttons & (U_CBUTTONS) ? 24.0f : 0) - (c1buttons & (D_CBUTTONS) ? 24.0f : 0);
+			forwardspeed = (c1buttons & umask ? 24.0f : 0) - (c1buttons & dmask ? 24.0f : 0);
 #ifndef PLATFORM_N64
-			forwardspeed += c2sticky;
+			if (controlmode == CONTROLMODE_PC) {
+				forwardspeed += c2sticky;
+			}
 #endif
 		}
 
-		sidespeed = (c1buttons & (R_CBUTTONS) ? 1 : 0) - (c1buttons & (L_CBUTTONS) ? 1 : 0);
+		sidespeed = (c1buttons & rmask ? 1 : 0) - (c1buttons & lmask ? 1 : 0);
 #ifndef PLATFORM_N64
-		if (!sidespeed) sidespeed = c2stickx * 0.0125f;
+		if (!sidespeed && controlmode == CONTROLMODE_PC) sidespeed = c2stickx * 0.0125f;
 #endif
 	} else if (controlmode == CONTROLMODE_21 || controlmode == CONTROLMODE_23) {
 		forwardspeed = c1sticky;
@@ -994,23 +1016,23 @@ void eyespyProcessInput(bool allowbuttons)
 		// Make eyespy look horizontally
 		if (domovecentre) {
 			if (g_Vars.currentplayer->eyespy->verta > 0.0f && forwardspeed != 0) {
-#ifdef PLATFORM_N64
-				if (g_Vars.currentplayer->eyespy->verta < 180.0f) {
-					tmp = g_Vars.currentplayer->eyespy->verta;
+				if (controlmode != CONTROLMODE_PC) {
+					if (g_Vars.currentplayer->eyespy->verta < 180.0f) {
+						tmp = g_Vars.currentplayer->eyespy->verta;
 
-					for (i = 0; i < g_Vars.lvupdate60; i++) {
-						tmp *= 0.04f;
-						g_Vars.currentplayer->eyespy->verta -= tmp;
-					}
-				} else {
-					tmp = 360.0f - g_Vars.currentplayer->eyespy->verta;
+						for (i = 0; i < g_Vars.lvupdate60; i++) {
+							tmp *= 0.04f;
+							g_Vars.currentplayer->eyespy->verta -= tmp;
+						}
+					} else {
+						tmp = 360.0f - g_Vars.currentplayer->eyespy->verta;
 
-					for (i = 0; i < g_Vars.lvupdate60; i++) {
-						tmp *= 0.04f;
-						g_Vars.currentplayer->eyespy->verta += tmp;
+						for (i = 0; i < g_Vars.lvupdate60; i++) {
+							tmp *= 0.04f;
+							g_Vars.currentplayer->eyespy->verta += tmp;
+						}
 					}
 				}
-#endif
 
 				g_Vars.currentplayer->eyespy->cosverta = cosf(g_Vars.currentplayer->eyespy->verta * 0.017453292384744f);
 				g_Vars.currentplayer->eyespy->sinverta = sinf(g_Vars.currentplayer->eyespy->verta * 0.017453292384744f);

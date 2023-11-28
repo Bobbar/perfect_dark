@@ -256,15 +256,21 @@ MenuItemHandlerResult menuhandlerMpControlStyle(s32 operation, struct menuitem *
 
 	switch (operation) {
 	case MENUOP_GETOPTIONCOUNT:
-		data->dropdown.value = 4;
+		data->dropdown.value = 5;
 		break;
 	case MENUOP_GETOPTIONTEXT:
-		return (s32) langGet(labels[data->dropdown.value]);
+		return (intptr_t) ((data->dropdown.value == 4) ? "Ext" : langGet(labels[data->dropdown.value]));
 	case MENUOP_SET:
-		optionsSetControlMode(g_MpPlayerNum, data->dropdown.value);
+		optionsSetControlMode(g_MpPlayerNum, (data->dropdown.value == 4 ? CONTROLMODE_PC : data->dropdown.value));
+#ifndef PLATFORM_N64
+		g_PlayerExtCfg[g_MpPlayerNum & 3].extcontrols = (data->dropdown.value == 4);
+#endif
 		break;
 	case MENUOP_GETSELECTEDINDEX:
 		data->dropdown.value = optionsGetControlMode(g_MpPlayerNum);
+		if (data->dropdown.value == CONTROLMODE_PC) {
+			data->dropdown.value = 4;
+		}
 		break;
 	}
 

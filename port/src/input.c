@@ -10,6 +10,9 @@
 #include "config.h"
 #include "utils.h"
 #include "system.h"
+#include "fs.h"
+
+#define CONTROLLERDB_FNAME "gamecontrollerdb.txt"
 
 #define MAX_BIND_STR 256
 
@@ -32,7 +35,8 @@ static SDL_GameController *pads[INPUT_MAX_CONTROLLERS];
 	.sens = { 1.f, 1.f, 1.f, 1.f }, \
 	.deadzone = { DEFAULT_DEADZONE, DEFAULT_DEADZONE, DEFAULT_DEADZONE, DEFAULT_DEADZONE_RY }, \
 	.stickCButtons = 0, \
-	.swapSticks = 1 \
+	.swapSticks = 1, \
+	.deviceIndex = -1 \
 }
 
 static struct controllercfg {
@@ -43,6 +47,7 @@ static struct controllercfg {
 	s32 deadzone[4];
 	s32 stickCButtons;
 	s32 swapSticks;
+	s32 deviceIndex;
 } padsCfg[INPUT_MAX_CONTROLLERS] = {
 	CONTROLLERCFG_DEFAULT,
 	CONTROLLERCFG_DEFAULT,
@@ -56,6 +61,8 @@ static char bindStrs[MAXCONTROLLERS][CK_TOTAL_COUNT][MAX_BIND_STR];
 static s32 fakeControllers = 0;
 static s32 firstController = 0;
 static s32 connectedMask = 0;
+
+static s32 numJoysticks = 0;
 
 static s32 mouseEnabled = 1;
 static s32 mouseLocked = 0;
@@ -157,10 +164,10 @@ static const char *vkJoyNames[] = {
 
 static char vkNames[VK_TOTAL_COUNT][64];
 
-void inputSetDefaultKeyBinds(void)
+void inputSetDefaultKeyBinds(s32 cidx, s32 n64mode)
 {
 	// TODO: make VK constants for all these
-	static const u32 kbbinds[][3] = {
+	static const u32 pckbbinds[][3] = {
 		{ CK_B,             SDL_SCANCODE_E,      0                   },
 		{ CK_X,             SDL_SCANCODE_R,      0                   },
 		{ CK_RTRIG,         VK_MOUSE_RIGHT,      SDL_SCANCODE_Z      },
@@ -183,7 +190,7 @@ void inputSetDefaultKeyBinds(void)
 		{ CK_2000,          SDL_SCANCODE_LCTRL,  0                   }
 	};
 
-	static const u32 joybinds[][2] = {
+	static const u32 pcjoybinds[][2] = {
 		{ CK_A,      SDL_CONTROLLER_BUTTON_A             },
 		{ CK_X,      SDL_CONTROLLER_BUTTON_X             },
 		{ CK_Y,      SDL_CONTROLLER_BUTTON_Y             },
@@ -200,24 +207,88 @@ void inputSetDefaultKeyBinds(void)
 		{ CK_8000,   SDL_CONTROLLER_BUTTON_LEFTSTICK     },
 	};
 
-	memset(binds, 0, sizeof(binds));
+	static const u32 n64kbbinds[][3] = {
+		{ CK_A,          SDL_SCANCODE_Q,      0                  },
+		{ CK_B,          SDL_SCANCODE_E,      0                  },
+		{ CK_RTRIG,      VK_MOUSE_RIGHT,      SDL_SCANCODE_LALT  },
+		{ CK_LTRIG,      SDL_SCANCODE_F,      0                  },
+		{ CK_ZTRIG,      VK_MOUSE_LEFT,       SDL_SCANCODE_SPACE },
+		{ CK_START,      SDL_SCANCODE_RETURN, 0                  },
+		{ CK_C_D,        SDL_SCANCODE_S,      0                  },
+		{ CK_C_U,        SDL_SCANCODE_W,      0                  },
+		{ CK_C_R,        SDL_SCANCODE_D,      0                  },
+		{ CK_C_L,        SDL_SCANCODE_A,      0                  },
+		{ CK_DPAD_L,     SDL_SCANCODE_LEFT,   0                  },
+		{ CK_DPAD_R,     SDL_SCANCODE_RIGHT,  0                  },
+		{ CK_DPAD_D,     SDL_SCANCODE_DOWN,   0                  },
+		{ CK_DPAD_U,     SDL_SCANCODE_UP,     0                  },
+		{ CK_STICK_YNEG, SDL_SCANCODE_K,      0                  },
+		{ CK_STICK_YPOS, SDL_SCANCODE_I,      0                  },
+		{ CK_STICK_XNEG, SDL_SCANCODE_J,      0                  },
+		{ CK_STICK_XPOS, SDL_SCANCODE_L,      0                  },
+	};
 
-	for (u32 i = 0; i < sizeof(kbbinds) / sizeof(kbbinds[0]); ++i) {
-		for (s32 j = 1; j < 3; ++j) {
-			if (kbbinds[i][j]) {
-				inputKeyBind(0, kbbinds[i][0], j - 1, kbbinds[i][j]);
+	static const u32 n64joybinds[][2] = {
+		{ CK_A,      SDL_CONTROLLER_BUTTON_A             },
+		{ CK_B,      SDL_CONTROLLER_BUTTON_B             },
+		{ CK_LTRIG,  SDL_CONTROLLER_BUTTON_LEFTSHOULDER  },
+		{ CK_RTRIG,  SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
+		{ CK_ZTRIG,  VK_JOY1_RTRIG - VK_JOY1_BEGIN       },
+		{ CK_START,  SDL_CONTROLLER_BUTTON_START         },
+		{ CK_DPAD_D, SDL_CONTROLLER_BUTTON_DPAD_DOWN     },
+		{ CK_DPAD_U, SDL_CONTROLLER_BUTTON_DPAD_UP       },
+		{ CK_DPAD_L, SDL_CONTROLLER_BUTTON_DPAD_LEFT     },
+		{ CK_DPAD_R, SDL_CONTROLLER_BUTTON_DPAD_RIGHT    },
+	};
+
+	memset(binds[cidx], 0, sizeof(binds[cidx]));
+
+	const u32 (*kbbinds)[3];
+	const u32 (*joybinds)[2];
+	u32 numkbbinds;
+	u32 numjoybinds;
+	if (n64mode) {
+		kbbinds = n64kbbinds;
+		joybinds = n64joybinds;
+		numkbbinds = sizeof(n64kbbinds) / sizeof(n64kbbinds[0]);
+		numjoybinds = sizeof(n64joybinds) / sizeof(n64joybinds[0]);
+	} else {
+		kbbinds = pckbbinds;
+		joybinds = pcjoybinds;
+		numkbbinds = sizeof(pckbbinds) / sizeof(pckbbinds[0]);
+		numjoybinds = sizeof(pcjoybinds) / sizeof(pcjoybinds[0]);
+	}
+
+	if (cidx == 0) {
+		for (u32 i = 0; i < numkbbinds; ++i) {
+			for (s32 j = 1; j < 3; ++j) {
+				if (kbbinds[i][j]) {
+					inputKeyBind(cidx, kbbinds[i][0], j - 1, kbbinds[i][j]);
+				}
 			}
 		}
 	}
 
-	for (u32 i = 0; i < sizeof(joybinds) / sizeof(joybinds[0]); ++i) {
-		for (s32 j = 0; j < INPUT_MAX_CONTROLLERS; ++j) {
-			inputKeyBind(j, joybinds[i][0], -1, VK_JOY_BEGIN + j * INPUT_MAX_CONTROLLER_BUTTONS + joybinds[i][1]);
-		}
+	for (u32 i = 0; i < numjoybinds; ++i) {
+		inputKeyBind(cidx, joybinds[i][0], -1, VK_JOY_BEGIN + cidx * INPUT_MAX_CONTROLLER_BUTTONS + joybinds[i][1]);
 	}
 }
 
-static inline void inputInitController(const s32 cidx)
+static inline s32 inputDeviceIndexFromId(const SDL_JoystickID id) {
+	for (s32 jidx = 0; jidx < numJoysticks; ++jidx) {
+		if (SDL_JoystickGetDeviceInstanceID(jidx) == id) {
+			return jidx;
+		}
+	}
+	return -1;
+}
+
+static inline SDL_JoystickID inputControllerGetId(SDL_GameController *ctrl)
+{
+	return SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(ctrl));
+}
+
+static inline void inputInitController(const s32 cidx, const s32 jidx)
 {
 #if SDL_VERSION_ATLEAST(2, 0, 18)
 	// SDL_GameControllerHasRumble() appeared in 2.0.18 even though SDL_GameControllerRumble() is in 2.0.9
@@ -236,21 +307,35 @@ static inline void inputInitController(const s32 cidx)
 	// make the LEDs on the controller indicate which player it's for
 	SDL_GameControllerSetPlayerIndex(pads[cidx], cidx);
 
+	// remember the joystick index
+	padsCfg[cidx].deviceIndex = jidx;
+
 	connectedMask |= (1 << cidx);
+
+	sysLogPrintf(LOG_NOTE, "input: assigned controller '%d: (%s)' (id %d) to player %d",
+		jidx, SDL_GameControllerName(pads[cidx]), inputControllerGetId(pads[cidx]), cidx);
 }
 
 static inline void inputCloseController(const s32 cidx)
 {
+	sysLogPrintf(LOG_NOTE, "input: removed controller '%d: (%s)' (id %d) from player %d",
+		padsCfg[cidx].deviceIndex, SDL_GameControllerName(pads[cidx]), inputControllerGetId(pads[cidx]), cidx);
+
+	// reset player LEDs
+	SDL_GameControllerSetPlayerIndex(pads[cidx], -1);
+
 	SDL_GameControllerClose(pads[cidx]);
+
 	pads[cidx] = NULL;
 	padsCfg[cidx].rumbleOn = 0;
+
 	if (cidx) {
 		connectedMask &= ~(1 << cidx);
 	}
 }
 
-
-static inline s32 inputControllerGetIndex(SDL_GameController *ctrl) {
+static inline s32 inputControllerGetIndex(SDL_GameController *ctrl)
+{
 	if (ctrl) {
 		for (s32 i = 0; i < INPUT_MAX_CONTROLLERS; ++i) {
 			if (pads[i] == ctrl) {
@@ -261,6 +346,94 @@ static inline s32 inputControllerGetIndex(SDL_GameController *ctrl) {
 	return -1;
 }
 
+static inline s32 inputControllerGetIndexByDeviceIndex(const s32 jidx)
+{
+	for (s32 cidx = 0; cidx < INPUT_MAX_CONTROLLERS; ++cidx) {
+		if (pads[cidx] && padsCfg[cidx].deviceIndex == jidx) {
+			return cidx;
+		}
+	}
+	return -1;
+}
+
+static inline s32 inputControllerGetIndexById(const SDL_JoystickID jid)
+{
+	for (s32 cidx = 0; cidx < INPUT_MAX_CONTROLLERS; ++cidx) {
+		if (pads[cidx]) {
+			if (inputControllerGetId(pads[cidx]) == jid) {
+				return cidx;
+			}
+		}
+	}
+	return -1;
+}
+
+static inline void inputCloseAllControllers(void)
+{
+	for (s32 cidx = 0; cidx < INPUT_MAX_CONTROLLERS; ++cidx) {
+		if (pads[cidx]) {
+			inputCloseController(cidx);
+			pads[cidx] = NULL;
+		}
+	}
+
+	connectedMask = 1; // always report first controller as connected
+}
+
+static inline s32 inputTryController(const s32 cidx, const s32 jidx)
+{
+	if (!pads[cidx]) {
+		pads[cidx] = SDL_GameControllerOpen(jidx);
+		if (pads[cidx]) {
+			inputInitController(cidx, jidx);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static inline void inputInitAllControllers(void)
+{
+	SDL_GameControllerUpdate();
+
+	numJoysticks = SDL_NumJoysticks();
+
+	connectedMask = 1; // always report first controller as connected
+
+	// first try to assign the controllers that we had last time
+	// we're still free to check by device index before any controller device events fire
+	for (s32 cidx = 0; cidx < INPUT_MAX_CONTROLLERS; ++cidx) {
+		const s32 jidx = padsCfg[cidx].deviceIndex;
+		if (jidx >= 0 && jidx < numJoysticks) {
+			if (SDL_IsGameController(jidx) && inputControllerGetIndexByDeviceIndex(jidx) < 0) {
+				// using the full assign function in case user sets same index for several players
+				if (inputTryController(cidx, jidx)) {
+					// success
+					continue;
+				}
+			}
+			// nothing was there, forget it
+			padsCfg[cidx].deviceIndex = -1;
+		}
+	}
+
+	// now try autofilling the rest, starting with firstController
+	for (s32 jidx = 0; jidx < numJoysticks; ++jidx) {
+		if (SDL_IsGameController(jidx) && inputControllerGetIndexByDeviceIndex(jidx) < 0) {
+			for (s32 cidx = firstController; cidx < INPUT_MAX_CONTROLLERS; ++cidx) {
+				if (inputTryController(cidx, jidx)) {
+					break;
+				}
+			}
+		}
+	}
+
+	const s32 overrideMask = (1 << fakeControllers) - 1;
+	if (overrideMask) {
+		connectedMask = overrideMask;
+	}
+}
+
 static int inputEventFilter(void *data, SDL_Event *event)
 {
 	switch (event->type) {
@@ -269,7 +442,7 @@ static int inputEventFilter(void *data, SDL_Event *event)
 				if (!pads[i]) {
 					pads[i] = SDL_GameControllerOpen(event->cdevice.which);
 					if (pads[i]) {
-						inputInitController(i);
+						inputInitController(i, event->cdevice.which);
 					}
 					break;
 				}
@@ -281,9 +454,15 @@ static int inputEventFilter(void *data, SDL_Event *event)
 			const s32 idx = inputControllerGetIndex(ctrl);
 			if (idx >= 0) {
 				inputCloseController(idx);
+				padsCfg[idx].deviceIndex = -1;
 			}
 			break;
 		}
+
+		case SDL_JOYDEVICEADDED:
+		case SDL_JOYDEVICEREMOVED:
+			numJoysticks = SDL_NumJoysticks(); // joystick count has changed
+			break;
 
 		case SDL_MOUSEWHEEL:
 			mouseWheel = event->wheel.y;
@@ -464,30 +643,25 @@ s32 inputInit(void)
 		SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
 	}
 
-	SDL_GameControllerUpdate();
-
-	const s32 numJoys = SDL_NumJoysticks();
-
-	connectedMask = 1; // always report first controller as connected
-
-	// if firstController is set to 1, keyboard will count as a separate controller on its own,
-	// so the first connected gamepad will go to player 2 instead of player 1
-	for (s32 jidx = 0, cidx = firstController; jidx < numJoys && cidx < INPUT_MAX_CONTROLLERS; ++jidx) {
-		if (SDL_IsGameController(jidx)) {
-			pads[cidx] = SDL_GameControllerOpen(jidx);
-			if (pads[cidx]) {
-				inputInitController(cidx);
-				++cidx;
-			}
+	// try to load controller db from an external file in the save folder
+	if (fsFileSize("$S/" CONTROLLERDB_FNAME)) {
+		const char *dbpath = fsFullPath("$S/" CONTROLLERDB_FNAME);
+		const s32 dbcount = SDL_GameControllerAddMappingsFromFile(dbpath);
+		if (dbcount >= 0) {
+			sysLogPrintf(LOG_NOTE, "input: added %d controller mappings from %s", dbcount, dbpath);
 		}
 	}
+
+	inputInitAllControllers();
 
 	// since the main event loop is elsewhere, we can receive some events we need using a watcher
 	SDL_AddEventWatch(inputEventFilter, NULL);
 
 	inputInitKeyNames();
 
-	inputSetDefaultKeyBinds();
+	for (s32 i = 0; i < INPUT_MAX_CONTROLLERS; ++i) {
+		inputSetDefaultKeyBinds(i, 0);
+	}
 
 	inputLockMouse(mouseDefaultLocked);
 
@@ -495,11 +669,6 @@ s32 inputInit(void)
 	// NOTE: by default sticks get swapped for 1.2: "right stick" here means left stick on your controller
 	for (s32 i = 0; i < INPUT_MAX_CONTROLLERS; ++i) {
 		inputControllerSetSticksSwapped(i, padsCfg[i].swapSticks);
-	}
-
-	const s32 overrideMask = (1 << fakeControllers) - 1;
-	if (overrideMask) {
-		connectedMask = overrideMask;
 	}
 
 	inputLoadBinds();
@@ -741,6 +910,102 @@ f32 inputControllerGetAxisDeadzone(s32 cidx, s32 stick, s32 axis)
 void inputControllerSetAxisDeadzone(s32 cidx, s32 stick, s32 axis, f32 value)
 {
 	padsCfg[cidx].deadzone[stick * 2 + axis] = value * 32767.f;
+}
+
+s32 inputGetConnectedControllers(s32 *out)
+{
+	s32 count = 0;
+
+	for (s32 jidx = 0; jidx < numJoysticks; ++jidx) {
+		if (SDL_IsGameController(jidx)) {
+			if (out && count < INPUT_MAX_CONNECTED_CONTROLLERS) {
+				out[count] = SDL_JoystickGetDeviceInstanceID(jidx);
+			}
+			++count;
+		}
+	}
+
+	return count;
+}
+
+s32 inputGetAssignedControllerId(s32 cidx)
+{
+	if (cidx < 0 || cidx >= INPUT_MAX_CONTROLLERS) {
+		return -1;
+	}
+
+	if (pads[cidx] == NULL) {
+		return -1;
+	}
+
+	return inputControllerGetId(pads[cidx]);
+}
+
+const char *inputGetConnectedControllerName(s32 id)
+{
+	static char fullName[256];
+
+	if (id < 0) {
+		return "Invalid";
+	}
+
+	const s32 jidx = inputDeviceIndexFromId(id);
+	if (jidx < 0) {
+		return "Invalid";
+	}
+
+	const char *name = SDL_GameControllerNameForIndex(jidx);
+	if (!name || !name[0]) {
+		name = "Unnamed Controller";
+	}
+
+	snprintf(fullName, sizeof(fullName), "%d: %s", jidx, name);
+
+	return fullName;
+}
+
+s32 inputAssignController(s32 cidx, s32 id)
+{
+	if (cidx < 0 || cidx >= INPUT_MAX_CONTROLLERS) {
+		return 0;
+	}
+
+	if (id < 0) {
+		// close current controller, if any
+		if (pads[cidx]) {
+			inputCloseController(cidx);
+			return 1;
+		}
+		return 0;
+	}
+
+	const s32 jidx = inputDeviceIndexFromId(id);
+	if (jidx < 0 || jidx >= SDL_NumJoysticks() || !SDL_IsGameController(jidx)) {
+		return 0;
+	}
+
+	// try to unassign any other instances of this controller
+	for (s32 i = 0; i < INPUT_MAX_CONTROLLERS; ++i) {
+		if (pads[i] && inputControllerGetId(pads[i]) == id) {
+			inputCloseController(i);
+			pads[i] = NULL;
+			padsCfg[i].deviceIndex = -1;
+		}
+	}
+
+	SDL_GameController *newpad = SDL_GameControllerOpen(jidx);
+	if (!newpad) {
+		return 0;
+	}
+
+	if (pads[cidx]) {
+		inputCloseController(cidx);
+	}
+
+	pads[cidx] = newpad;
+	inputInitController(cidx, id);
+
+	return 1;
 }
 
 void inputKeyBind(s32 idx, u32 ck, s32 bind, u32 vk)
@@ -1002,6 +1267,7 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
 		configRegisterFloat(strFmt("%s.RStickScaleY", secname), &padsCfg[c].sens[3], -10.f, 10.f);
 		configRegisterInt(strFmt("%s.StickCButtons", secname), &padsCfg[c].stickCButtons, 0, 1);
 		configRegisterInt(strFmt("%s.SwapSticks", secname), &padsCfg[c].swapSticks, 0, 1);
+		configRegisterInt(strFmt("%s.ControllerIndex", secname), &padsCfg[c].deviceIndex, -1, 0x7FFFFFFF);
 		secname[13] = '.';
 		for (u32 ck = 0; ck < CK_TOTAL_COUNT; ++ck) {
 			snprintf(keyname, sizeof(keyname), "%s.%s", secname, inputGetContKeyName(ck));

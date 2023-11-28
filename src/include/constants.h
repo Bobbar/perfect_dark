@@ -694,6 +694,7 @@
 #define CONTROLMODE_22 5
 #define CONTROLMODE_23 6
 #define CONTROLMODE_24 7
+#define CONTROLMODE_PC 8 // "pc port" controls; enabled in the .ini file
 
 #define COUNTDOWNTIMERREASON_AI        0x01
 #define COUNTDOWNTIMERREASON_NOCONTROL 0x10
@@ -4694,12 +4695,21 @@ enum weaponnum {
 #define BUTTON_RADIAL         D_JPAD
 #define BUTTON_ALTMODE        L_TRIG
 
-#define BUTTON_CROUCH_CYCLE   CONT_8000             
-#define BUTTON_HALF_CROUCH    CONT_4000             
-#define BUTTON_FULL_CROUCH    CONT_2000             
+#define BUTTON_CROUCH_CYCLE   CONT_8000
+#define BUTTON_HALF_CROUCH    CONT_4000
+#define BUTTON_FULL_CROUCH    CONT_2000
 
 #define MOUSEAIM_CLASSIC 0 // crosshair moves around the screen in aim mode
 #define MOUSEAIM_LOCKED 1  // crosshair locked to the center of the screen in aim mode
+
+#define HUDCENTER_NONE 0   // don't center HUD
+#define HUDCENTER_NORMAL 1 // center HUD in 4:3 window
+#define HUDCENTER_WIDE 2   // center HUD in 16:9 window
+
+#define CROUCHMODE_HOLD 0   // hold the crouch buttons to keep crouching
+#define CROUCHMODE_ANALOG 1 // analog crouch like on n64
+#define CROUCHMODE_TOGGLE 2 // press the crouch buttons to toggle stance
+#define CROUCHMODE_TOGGLE_ANALOG (CROUCHMODE_ANALOG | CROUCHMODE_TOGGLE)
 
 #endif
 

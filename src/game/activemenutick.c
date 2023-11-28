@@ -44,6 +44,23 @@ void amTick(void)
 			s8 contpadnum = optionsGetContpadNum1(g_Vars.currentplayerstats->mpindex);
 			s32 numsamples = joyGetNumSamples();
 			s32 j;
+			u32 amask, lrtmask, umask, dmask, lmask, rmask;
+
+			if (controlmode == CONTROLMODE_PC) {
+				amask = D_JPAD;
+				lrtmask = R_TRIG;
+				umask = U_CBUTTONS;
+				dmask = D_CBUTTONS;
+				lmask = L_CBUTTONS;
+				rmask = R_CBUTTONS;
+			} else {
+				amask = A_BUTTON;
+				lrtmask = L_TRIG | R_TRIG;
+				umask = U_JPAD | U_CBUTTONS;
+				dmask = D_JPAD | D_CBUTTONS;
+				lmask = L_JPAD | L_CBUTTONS;
+				rmask = R_JPAD | R_CBUTTONS;
+			}
 
 			for (j = 0; j < numsamples; j++) {
 				s8 gotonextscreen = false;
@@ -94,7 +111,7 @@ void amTick(void)
 #endif
 
 				if (g_Vars.currentplayer->activemenumode == AMMODE_EDIT) {
-					buttonsstate = buttonsstate & D_JPAD;
+					buttonsstate = buttonsstate & amask;
 					cstickx = 0;
 					csticky = 0;
 					buttonspressed = 0;
@@ -102,11 +119,11 @@ void amTick(void)
 
 				// JPN fixes the bug that's documented in amChangeScreen
 				if (controlmode == CONTROLMODE_13 || controlmode == CONTROLMODE_14) {
-					if ((buttonsstate & R_TRIG)) {
+					if (buttonsstate & (L_TRIG | R_TRIG)) {
 						stayopen = true;
 					}
 
-					if (buttonsstate & D_JPAD) {
+					if (buttonsstate & A_BUTTON) {
 #if VERSION >= VERSION_JPN_FINAL || !defined(PLATFORM_N64)
 						if (g_Vars.currentplayer->numaibuddies > 0) {
 							g_AmMenus[g_AmIndex].allbots = true;
@@ -116,11 +133,11 @@ void amTick(void)
 #endif
 					}
 				} else {
-					if (buttonsstate & D_JPAD) {
+					if (buttonsstate & amask) {
 						stayopen = true;
 					}
 
-					if ((buttonsstate & R_TRIG)) {
+					if (buttonsstate & lrtmask) {
 #if VERSION >= VERSION_JPN_FINAL || !defined(PLATFORM_N64)
 						if (g_Vars.currentplayer->numaibuddies > 0) {
 							g_AmMenus[g_AmIndex].allbots = true;
@@ -148,19 +165,19 @@ void amTick(void)
 					amChangeScreen(0);
 				}
 
-				if (buttonsstate & U_CBUTTONS) {
+				if (buttonsstate & umask) {
 					row = 0;
 				}
 
-				if (buttonsstate & D_CBUTTONS) {
+				if (buttonsstate & dmask) {
 					row = 2;
 				}
 
-				if (buttonsstate & L_CBUTTONS) {
+				if (buttonsstate & lmask) {
 					column = 0;
 				}
 
-				if (buttonsstate & R_CBUTTONS) {
+				if (buttonsstate & rmask) {
 					column = 2;
 				}
 
@@ -175,13 +192,13 @@ void amTick(void)
 					u32 buttonspressed2 = joyGetButtonsPressedOnSample(j, contpadnum2, 0xffffffff);
 
 					if (g_Vars.currentplayer->activemenumode == AMMODE_EDIT) {
-						buttonsstate2 = buttonsstate2 & D_JPAD;
+						buttonsstate2 = buttonsstate2 & A_BUTTON;
 						cstickx2 = 0;
 						csticky2 = 0;
 						buttonspressed2 = 0;
 					}
 
-					if (buttonsstate2 & D_JPAD) {
+					if (buttonsstate2 & A_BUTTON) {
 						stayopen = true;
 					}
 
@@ -189,19 +206,19 @@ void amTick(void)
 						toggle = true;
 					}
 
-					if (buttonsstate2 & U_CBUTTONS) {
+					if (buttonsstate2 & umask) {
 						row = 0;
 					}
 
-					if (buttonsstate2 & D_CBUTTONS) {
+					if (buttonsstate2 & dmask) {
 						row = 2;
 					}
 
-					if (buttonsstate2 & L_CBUTTONS) {
+					if (buttonsstate2 & lmask) {
 						column = 0;
 					}
 
-					if (buttonsstate2 & R_CBUTTONS) {
+					if (buttonsstate2 & rmask) {
 						column = 2;
 					}
 
@@ -246,7 +263,7 @@ void amTick(void)
 					stayopen = false;
 				}
 
-#if VERSION >= VERSION_NTSC_1_0
+#if (VERSION >= VERSION_NTSC_1_0) && defined(PLATFORM_N64)
 				if (g_Vars.lvupdate240 == 0) {
 					stayopen = false;
 				}

@@ -202,14 +202,24 @@ void bbikeApplyMoveData(struct movedata *data)
 	s8 contnum = optionsGetContpadNum1(g_Vars.currentplayerstats->mpindex);
 	f32 value1;
 	f32 tmp;
+	s32 contmode = optionsGetControlMode(g_Vars.currentplayerstats->mpindex);
 
-	if ((optionsGetControlMode(g_Vars.currentplayerstats->mpindex) == CONTROLMODE_12
-				|| optionsGetControlMode(g_Vars.currentplayerstats->mpindex) == CONTROLMODE_14
-				|| optionsGetControlMode(g_Vars.currentplayerstats->mpindex) == CONTROLMODE_13
-				|| optionsGetControlMode(g_Vars.currentplayerstats->mpindex) == CONTROLMODE_11)
+	if ((contmode == CONTROLMODE_12
+				|| contmode == CONTROLMODE_14
+				|| contmode == CONTROLMODE_13
+				|| contmode == CONTROLMODE_11
+				|| contmode == CONTROLMODE_PC)
 			&& !lvIsPaused()) {
-		data->digitalstepleft = joyCountButtonsOnSpecificSamples(0, contnum, L_CBUTTONS);
-		data->digitalstepright = joyCountButtonsOnSpecificSamples(0, contnum,R_CBUTTONS);
+		u32 lmask, rmask;
+		if (contmode == CONTROLMODE_PC) {
+			lmask = L_CBUTTONS;
+			rmask = R_CBUTTONS;
+		} else {
+			lmask = L_JPAD | L_CBUTTONS;
+			rmask = R_JPAD | R_CBUTTONS;
+		}
+		data->digitalstepleft = joyCountButtonsOnSpecificSamples(0, contnum, lmask);
+		data->digitalstepright = joyCountButtonsOnSpecificSamples(0, contnum, rmask);
 	}
 
 	// Forward/back

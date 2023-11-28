@@ -4639,7 +4639,7 @@ void menuProcessInput(void)
 				inputs.select = 1;
 			}
 
-			#ifndef PLATFORM_N64
+#ifndef PLATFORM_N64
 			// this seems sensible to achieve 1964 parity
 			if (buttonsnow & BUTTON_RADIAL) {
 				inputs.select = 1;
@@ -4648,8 +4648,8 @@ void menuProcessInput(void)
 			if (buttonsnow & BUTTON_WPNBACK) {
 				inputs.back = 1;
 			}
+#endif
 
-			#endif
 			if (buttonsnow & B_BUTTON) {
 				inputs.back = 1;
 			}
