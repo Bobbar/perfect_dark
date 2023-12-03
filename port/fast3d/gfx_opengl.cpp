@@ -394,7 +394,30 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     append_line(fs_buf, &fs_len, "    return fract(sin(random) * 143758.5453);");
     append_line(fs_buf, &fs_len, "}");
 
-    if (current_filter_mode == FILTER_THREE_POINT) {
+    if (cc_features.opt_blur) {
+        // blur filter, used for menu backgrounds
+        append_line(fs_buf, &fs_len, R"(
+            const vec4 blurOffsets = vec4(-1.5, -0.5, +0.5, +1.5);
+            const mat4 blurWeights = mat4(
+                0.009947, 0.009641, 0.008778, 0.007509,
+                0.009641, 0.009345, 0.008508, 0.007278,
+                0.008778, 0.008508, 0.007747, 0.006626,
+                0.007509, 0.007278, 0.006626, 0.005668
+            );
+            lowp vec4 hookTexture2D(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {
+                lowp vec4 color = vec4(0.0);
+                lowp float wacc = 0.0;
+                for (int y = 0; y < 4; ++y) {
+                    for (int x = 0; x < 4; ++x) {
+                        vec2 ofs = vec2(blurOffsets[x], blurOffsets[y]) / texSize;
+                        wacc += blurWeights[x][y];
+                        color += texture2D(tex, texCoord + ofs) * blurWeights[x][y];
+                    }
+                }
+                return vec4(color.rgb / wacc, 1.0);
+            })"
+        );
+    } else if (current_filter_mode == FILTER_THREE_POINT) {
 #if __APPLE__
         append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) texture(tex, texCoord - (off)/texSize)");
 #else

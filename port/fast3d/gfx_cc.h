@@ -53,6 +53,7 @@ enum {
 #define SHADER_OPT_TEXEL1_MASK (1 << 13)
 #define SHADER_OPT_TEXEL0_BLEND (1 << 14)
 #define SHADER_OPT_TEXEL1_BLEND (1 << 15)
+#define SHADER_OPT_BLUR (1 << 16)
 
 struct ColorCombinerKey {
     uint64_t combine_mode;
@@ -75,6 +76,7 @@ struct CCFeatures {
     bool opt_alpha_threshold;
     bool opt_invisible;
     bool opt_grayscale;
+    bool opt_blur;
     bool used_textures[2];
     bool used_masks[2];
     bool used_blend[2];

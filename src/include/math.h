@@ -5,6 +5,9 @@
 #include_next <math.h>
 #undef M_PI
 #undef M_TAU
+// HACK: for some reason the #include_next above doesn't really do anything, so
+float fabsf(float x);
+float roundf(float x);
 #endif
 
 // @bug?

@@ -164,7 +164,13 @@ Gfx *menugfxRenderBgBlur(Gfx *gdl, u32 colour, s16 arg2, s16 arg3)
 	gDPSetAlphaCompare(gdl++, G_AC_NONE);
 	gDPSetCombineMode(gdl++, G_CC_MODULATEI, G_CC_MODULATEI);
 	gSPClearGeometryMode(gdl++, G_CULL_BOTH);
+
+#ifdef PLATFORM_N64
 	gDPSetTextureFilter(gdl++, G_TF_BILERP);
+#else
+	// enable blur filter for the texture
+	gDPSetTextureFilter(gdl++, G_TF_BLUR_EXT);
+#endif
 
 	gDPSetRenderMode(gdl++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
 
@@ -239,6 +245,10 @@ Gfx *menugfxRenderBgBlur(Gfx *gdl, u32 colour, s16 arg2, s16 arg3)
 	gSPVertex(gdl++, osVirtualToPhysical(vertices), 4, 0);
 
 	gSPTri2(gdl++, 0, 1, 2, 2, 3, 0);
+
+#ifndef PLATFORM_N64
+	gDPSetTextureFilter(gdl++, G_TF_BILERP);
+#endif
 
 	return gdl;
 }

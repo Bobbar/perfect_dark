@@ -207,6 +207,10 @@
 #define G_NO_CLIPPING_EXT        0x00000100
 #define G_MODULATE_EXT           0x00000200 // this should really go into OTHERMODE_H, but for some reason I can't get it to work
 
+/* Extra texture filtering mode */
+
+#define G_TF_BLUR_EXT (1 << G_MDSFT_TEXTFILT)
+
 /* Extended command macros */
 
 #define gDPSetFramebufferTargetEXT(pkt, f, s, w, i) \

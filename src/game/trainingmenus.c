@@ -1587,7 +1587,7 @@ MenuDialogHandlerResult ciCharacterProfileMenuDialog(s32 operation, struct menud
 		}
 
 #ifndef PLATFORM_N64
-		x = (float)x * (4.f / 3.f) / videoGetAspect();
+		x = (float)x * ((f32)SCREEN_WIDTH_LO / (f32)SCREEN_HEIGHT_LO) / videoGetAspect();
 #endif
 
 		menuConfigureModel(&g_Menus[g_MpPlayerNum].menumodel, x, y, 0, 0, 0, 0, scale,

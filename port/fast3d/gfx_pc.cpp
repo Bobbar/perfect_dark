@@ -1288,6 +1288,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         (rdp.other_mode_l & (3 << 24)) == (G_BL_0 << 24) && (rdp.other_mode_l & (3 << 20)) == (G_BL_CLR_MEM << 20);
     bool use_grayscale = rdp.grayscale;
     bool use_modulate = use_alpha && (rsp.extra_geometry_mode & G_MODULATE_EXT) != 0;
+    bool use_blur = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) == G_TF_BLUR_EXT;
 
     if (texture_edge) {
         use_alpha = true;
@@ -1316,6 +1317,9 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     }
     if (use_grayscale) {
         cc_options |= (uint64_t)SHADER_OPT_GRAYSCALE;
+    }
+    if (use_blur) {
+        cc_options |= (uint64_t)SHADER_OPT_BLUR;
     }
 
     // If we are not using alpha, clear the alpha components of the combiner as they have no effect

@@ -3037,7 +3037,7 @@ f32 player0f0bd358(void)
 #ifdef PLATFORM_N64
 	return result;
 #else
-	return result * (videoGetAspect() / (4.0f / 3.0f));
+	return result * (videoGetAspect() / ((f32)SCREEN_WIDTH_LO / (f32)SCREEN_HEIGHT_LO));
 #endif
 }
 
