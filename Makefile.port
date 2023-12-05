@@ -316,4 +316,4 @@ allclean:
 	rm -rf src/generated
 
 codeclean:
-	find $(B_DIR)/game $(B_DIR)/inflate $(B_DIR)/lib $(B_DIR)/port -name '*.o' -delete
+	find $(B_DIR)/ -name '*.o' -delete

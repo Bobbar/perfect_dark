@@ -217,6 +217,7 @@ struct GfxDimensions gfx_current_dimensions;
 static struct GfxDimensions gfx_prev_dimensions;
 struct XYWidthHeight gfx_current_game_window_viewport;
 struct XYWidthHeight gfx_current_native_viewport;
+float gfx_current_native_aspect = 4.f / 3.f;
 bool gfx_framebuffers_enabled = true;
 
 static bool game_renders_to_framebuffer;
@@ -1652,12 +1653,12 @@ static void gfx_sp_geometry_mode(uint32_t clear, uint32_t set) {
 static inline void gfx_update_aspect_mode(void) {
     const uint32_t side = rsp.aspect_mode & G_ASPECT_CENTER_EXT;
 
-    rsp.aspect_scale = rsp.aspect_mode ? (4.f / 3.f) : gfx_current_window_dimensions.aspect_ratio;
+    rsp.aspect_scale = rsp.aspect_mode ? gfx_current_native_aspect : gfx_current_window_dimensions.aspect_ratio;
 
     if (side == G_ASPECT_LEFT_EXT) {
-        rsp.aspect_ofs = 1.f - 3.f * gfx_current_dimensions.aspect_ratio / 4.f;
+        rsp.aspect_ofs = 1.f - gfx_current_dimensions.aspect_ratio / gfx_current_native_aspect;
     } else if (side == G_ASPECT_RIGHT_EXT) {
-        rsp.aspect_ofs = 3.f * gfx_current_dimensions.aspect_ratio / 4.f - 1.f;
+        rsp.aspect_ofs = gfx_current_dimensions.aspect_ratio / gfx_current_native_aspect - 1.f;
     } else {
         rsp.aspect_ofs = 0.f;
     }
@@ -1685,8 +1686,8 @@ static void gfx_adjust_viewport_or_scissor(XYWidthHeight* area, bool preserve_as
         area->y = SCREEN_HEIGHT - area->y;
         area->y *= RATIO_Y;
         if (preserve_aspect) {
-            // preserve 4:3
-            const float ratio = (4.f / 3.f) / gfx_current_dimensions.aspect_ratio;
+            // preserve native aspect ratio
+            const float ratio = gfx_current_native_aspect / gfx_current_dimensions.aspect_ratio;
             const float midx = gfx_current_dimensions.width * 0.5f;
             area->x = midx + (area->x - midx) * ratio;
             area->x += rsp.aspect_ofs * gfx_current_dimensions.width * 0.5f;

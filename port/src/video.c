@@ -39,7 +39,8 @@ s32 videoInit(void)
 	renderingAPI = &gfx_opengl_api;
 
 	gfx_current_native_viewport.width = 320;
-	gfx_current_native_viewport.height = 240;
+	gfx_current_native_viewport.height = 220;
+	gfx_current_native_aspect = 320.f / 220.f;
 	gfx_framebuffers_enabled = (bool)vidFramebuffers;
 	gfx_msaa_level = vidMSAA;
 
@@ -110,6 +111,7 @@ void videoUpdateNativeResolution(s32 w, s32 h)
 {
 	gfx_current_native_viewport.width = w;
 	gfx_current_native_viewport.height = h;
+	gfx_current_native_aspect = (float)w / (float)h;
 }
 
 s32 videoGetNativeWidth(void)
