@@ -104,6 +104,7 @@ bool g_SchedIsFirstTask = true;
 s32 g_PrevFrameFb = -1;
 s32 g_BlurFb = -1;
 s32 g_BlurFbCapTimer = -1;
+bool g_BlurFbDirty = true;
 
 void schedSetCrashEnable1(bool enable)
 {
@@ -390,8 +391,12 @@ void schedConsiderScreenshot(void)
 	if (g_BlurFbCapTimer == 0) {
 		videoCopyFramebuffer(g_BlurFb, 0, -1, -1);
 		g_BlurFbCapTimer = -1;
+		g_BlurFbDirty = false;
 	} else if (g_BlurFbCapTimer > 0) {
 		--g_BlurFbCapTimer;
+	} else if (g_BlurFbCapTimer < 0) {
+		// no blur requested this frame, mark blur fb dirty
+		g_BlurFbDirty = true;
 	}
 
 	if (g_MenuData.screenshottimer >= 2) {

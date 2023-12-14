@@ -291,7 +291,7 @@ static void gfx_sdl_set_target_fps(int fps) {
 }
 
 static bool gfx_sdl_can_disable_vsync(void) {
-    return false;
+    return true;
 }
 
 static void *gfx_sdl_get_window_handle(void) {
@@ -302,9 +302,13 @@ static void gfx_sdl_set_window_title(const char *title) {
     SDL_SetWindowTitle(wnd, title);
 }
 
-static void gfx_sdl_set_swap_interval(int interval) {
-    SDL_GL_SetSwapInterval(interval);
-    vsync_enabled = (interval != 0);
+static bool gfx_sdl_set_swap_interval(int interval) {
+    const bool success = SDL_GL_SetSwapInterval(interval) >= 0;
+    vsync_enabled = success && (interval != 0);
+    if (!success) {
+        sysLogPrintf(LOG_WARNING, "SDL: failed to set vsync %d: %s", interval, SDL_GetError());
+    }
+    return success;
 }
 
 struct GfxWindowManagerAPI gfx_sdl = { 

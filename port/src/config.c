@@ -133,7 +133,7 @@ static void configSetFromString(const char *key, const char *val)
 		case CFG_S32:
 			tmp_s32 = atoi(val);
 			if (cfg->min_s32 < cfg->max_s32) {
-				tmp_f32 = configClampInt(tmp_s32, cfg->min_s32, cfg->max_s32);
+				tmp_s32 = configClampInt(tmp_s32, cfg->min_s32, cfg->max_s32);
 			}
 			*(s32 *)cfg->ptr = tmp_s32;
 			break;

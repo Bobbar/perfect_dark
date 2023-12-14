@@ -545,6 +545,7 @@ extern u32 g_HudAlignModeR;
 extern s32 g_PrevFrameFb;
 extern s32 g_BlurFb;
 extern s32 g_BlurFbCapTimer;
+extern bool g_BlurFbDirty;
 extern s32 g_TickRateDiv;
 extern s32 g_MusicDisableMpDeath;
 

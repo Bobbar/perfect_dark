@@ -46,7 +46,15 @@ s32 videoInit(void)
 
 	gfx_init(wmAPI, renderingAPI, "PD", vidFullscreen, vidWidth, vidHeight, 100, 100);
 
-	wmAPI->set_swap_interval(vidVsync);
+	if (!wmAPI->set_swap_interval(vidVsync)) {
+		vidVsync = 0;
+	}
+
+	if (vidVsync == 0 && vidFramerateLimit == 0) {
+		// cap FPS if there's no vsync to prevent the game from exploding
+		vidFramerateLimit = VIDEO_MAX_FPS;
+	}
+
 	wmAPI->set_target_fps(vidFramerateLimit); // disabled because vsync is on
 	renderingAPI->set_texture_filter((enum FilteringMode)texFilter);
 
@@ -228,7 +236,7 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
 	configRegisterInt("Video.DefaultHeight", &vidHeight, 0, 32767);
 	configRegisterInt("Video.VSync", &vidVsync, -1, 10);
 	configRegisterInt("Video.FramebufferEffects", &vidFramebuffers, 0, 1);
-	configRegisterInt("Video.FramerateLimit", &vidFramerateLimit, 0, 10000);
+	configRegisterInt("Video.FramerateLimit", &vidFramerateLimit, 0, VIDEO_MAX_FPS);
 	configRegisterInt("Video.MSAA", &vidMSAA, 1, 16);
 	configRegisterInt("Video.TextureFilter", &texFilter, 0, 2);
 	configRegisterInt("Video.TextureFilter2D", &texFilter2D, 0, 1);

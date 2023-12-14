@@ -289,6 +289,14 @@ Gfx *bviewDrawMotionBlur(Gfx *gdl, u32 colour, u32 alpha)
 	if (!videoFramebuffersSupported()) {
 		return gdl;
 	}
+
+	// capture fb at the end of this frame
+	g_BlurFbCapTimer = 0;
+
+	// don't render first blur frame as we haven't captured the fb yet
+	if (g_BlurFbDirty) {
+		return gdl;
+	}
 #endif
 
 	mainOverrideVariable("sfxxx", &sfxxx);
@@ -312,7 +320,6 @@ Gfx *bviewDrawMotionBlur(Gfx *gdl, u32 colour, u32 alpha)
 		viewleft << 2, viewtop << 2, viewleft, viewtop,
 		(viewleft + viewwidth) << 2, (viewtop + viewheight) << 2, viewleft + viewwidth, viewtop + viewheight,
 		0, videoGetNativeWidth(), videoGetNativeHeight());
-	g_BlurFbCapTimer = 0;
 #endif
 
 	return gdl;
@@ -521,6 +528,14 @@ Gfx *bviewDrawZoomBlur(Gfx *gdl, u32 colour, s32 alpha, f32 arg3, f32 arg4)
 	if (!videoFramebuffersSupported()) {
 		return gdl;
 	}
+
+	// capture fb at the end of this frame
+	g_BlurFbCapTimer = 0;
+
+	// don't render first blur frame as we haven't captured the fb yet
+	if (g_BlurFbDirty) {
+		return gdl;
+	}
 #endif
 
 	strcpy(var800a41c0, "stretchBlurGfx");
@@ -550,7 +565,6 @@ Gfx *bviewDrawZoomBlur(Gfx *gdl, u32 colour, s32 alpha, f32 arg3, f32 arg4)
 		left << 2, top << 2, viewleft, viewtop,
 		right << 2, bottom << 2, viewleft + viewwidth, viewtop + viewheight,
 		0, videoGetNativeWidth(), videoGetNativeHeight());
-	g_BlurFbCapTimer = 0;
 #endif
 
 	return gdl;

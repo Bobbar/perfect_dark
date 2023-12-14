@@ -1098,7 +1098,13 @@ void eyespyProcessInput(bool allowbuttons)
 		if (g_Vars.currentplayer->eyespy->bobactive || ABS(g_Vars.currentplayer->eyespy->vel.y) < 0.1f) {
 			g_Vars.currentplayer->eyespy->bobactive = true;
 			g_Vars.currentplayer->eyespy->bobtimer += g_Vars.lvupdate60;
+#ifdef PLATFORM_N64
 			g_Vars.currentplayer->eyespy->vel.y += 0.025f * g_Vars.currentplayer->eyespy->bobdir;
+#else
+			// HACK: how do I scale this properly?
+			const f32 scale = (g_Vars.lvupdate60freal <= 1.1f) ? 0.0055f : 0.0125f;
+			g_Vars.currentplayer->eyespy->vel.y += scale * g_Vars.lvupdate60freal * g_Vars.currentplayer->eyespy->bobdir;
+#endif
 
 			if (g_Vars.currentplayer->eyespy->bobtimer > TICKS(120)) {
 				g_Vars.currentplayer->eyespy->bobtimer = 0;

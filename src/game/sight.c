@@ -25,7 +25,7 @@
 
 static inline f32 sightGetScaleX(void)
 {
-	return (videoGetAspect() / (4.f / 3.f));
+	return (videoGetAspect() / SCREEN_ASPECT);
 }
 
 static inline s32 sightGetAdjustedX(const f32 x)
