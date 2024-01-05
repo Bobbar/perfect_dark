@@ -584,7 +584,7 @@ struct menuitem g_ExtendedControllerMenuItems[] = {
 		MENUITEMFLAG_LITERAL_TEXT,
 		(uintptr_t)"Analog Movement",
 		0,
-		menuhandlerAnalogMovement,
+		menuhandlerAnalogMovement,//
 	},
 	{
 		MENUITEMTYPE_CHECKBOX,
@@ -592,7 +592,7 @@ struct menuitem g_ExtendedControllerMenuItems[] = {
 		MENUITEMFLAG_LITERAL_TEXT,
 		(uintptr_t)"Swap Sticks",
 		0,
-		menuhandlerSwapSticks,
+		menuhandlerSwapSticks,//
 	},
 	{
 		MENUITEMTYPE_SELECTABLE,
@@ -903,7 +903,7 @@ static MenuItemHandlerResult menuhandlerCrouchMode(s32 operation, struct menuite
 	case MENUOP_GETOPTIONTEXT:
 		return (intptr_t)opts[data->dropdown.value];
 	case MENUOP_SET:
-		g_PlayerExtCfg[g_ExtMenuPlayer].crouchmode = data->dropdown.value;
+		g_PlayerExtCfg[g_ExtMenuPlayer].crouchmode = data->dropdown.value;//
 		break;
 	case MENUOP_GETSELECTEDINDEX:
 		data->dropdown.value = g_PlayerExtCfg[g_ExtMenuPlayer].crouchmode;
@@ -1287,9 +1287,17 @@ struct menuitem g_ExtendedBindsMenuItems[] = {
 		MENUITEMTYPE_SELECTABLE,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Reset to XBLA Defaults\n",
+		0,
+		menuhandlerResetBindsXBLA,//
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
 		(uintptr_t)"Reset to N64 Defaults\n",
 		0,
-		menuhandlerResetBindsN64,
+		menuhandlerResetBindsN64,//
 	},
 	{
 		MENUITEMTYPE_SEPARATOR,
@@ -1375,16 +1383,29 @@ static MenuItemHandlerResult menuhandlerBind(s32 operation, struct menuitem *ite
 static MenuItemHandlerResult menuhandlerResetBindsPC(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	if (operation == MENUOP_SET) {
-		inputSetDefaultKeyBinds(g_ExtMenuPlayer, false);
+		inputSetDefaultKeyBinds(g_ExtMenuPlayer, defaultbindtype.PC);
 	}
 
 	return 0;
 }
 
-static MenuItemHandlerResult menuhandlerResetBindsN64(s32 operation, struct menuitem *item, union handlerdata *data)
+static MenuItemHandlerResult menuhandlerResetBindsXBLA(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	if (operation == MENUOP_SET) {
-		inputSetDefaultKeyBinds(g_ExtMenuPlayer, true);
+		inputSetDefaultKeyBinds(g_ExtMenuPlayer, defaultbindtype.XBLA);//
+		inputControllerSetDualAnalog(g_ExtMenuPlayer, true);
+		inputControllerSetSticksSwapped(g_ExtMenuPlayer, true);
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerResetBindsN64(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	if (operation == MENUOP_SET) {
+		inputSetDefaultKeyBinds(g_ExtMenuPlayer, defaultbindtype.VANILLA);//
+		inputControllerSetDualAnalog(g_ExtMenuPlayer, false);
+		inputControllerSetSticksSwapped(g_ExtMenuPlayer, false);
 	}
 
 	return 0;

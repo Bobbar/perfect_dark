@@ -81,6 +81,12 @@ enum contkey {
   CK_TOTAL_COUNT
 };
 
+enum defaultbindtype {
+	PC,
+	XBLA,
+	VANILLA
+};
+
 // returns bitmask of connected controllers or -1 if failed
 s32 inputInit(void);
 

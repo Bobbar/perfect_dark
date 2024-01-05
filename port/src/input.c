@@ -169,7 +169,7 @@ static const char *vkJoyNames[] = {
 
 static char vkNames[VK_TOTAL_COUNT][64];
 
-void inputSetDefaultKeyBinds(s32 cidx, s32 n64mode)
+void inputSetDefaultKeyBinds(s32 cidx, defaultbindtype type)
 {
 	// TODO: make VK constants for all these
 	static const u32 pckbbinds[][3] = {
@@ -233,12 +233,25 @@ void inputSetDefaultKeyBinds(s32 cidx, s32 n64mode)
 		{ CK_STICK_XPOS, SDL_SCANCODE_L,      0                  },
 	};
 
-	static const u32 n64joybinds[][2] = {
+	static const u32 n64xblajoybinds[][2] = {
 		{ CK_A,      SDL_CONTROLLER_BUTTON_A             },
 		{ CK_B,      SDL_CONTROLLER_BUTTON_B             },
 		{ CK_LTRIG,  SDL_CONTROLLER_BUTTON_LEFTSHOULDER  },
 		{ CK_RTRIG,  SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
 		{ CK_ZTRIG,  VK_JOY1_RTRIG - VK_JOY1_BEGIN       },
+		{ CK_START,  SDL_CONTROLLER_BUTTON_START         },
+		{ CK_DPAD_D, SDL_CONTROLLER_BUTTON_DPAD_DOWN     },
+		{ CK_DPAD_U, SDL_CONTROLLER_BUTTON_DPAD_UP       },
+		{ CK_DPAD_L, SDL_CONTROLLER_BUTTON_DPAD_LEFT     },
+		{ CK_DPAD_R, SDL_CONTROLLER_BUTTON_DPAD_RIGHT    },
+	};
+
+	static const u32 n64vanillajoybinds[][2] = {
+		{ CK_A,      SDL_CONTROLLER_BUTTON_A             },
+		{ CK_B,      SDL_CONTROLLER_BUTTON_B             },
+		{ CK_LTRIG,  SDL_CONTROLLER_BUTTON_LEFTSHOULDER  },
+		{ CK_RTRIG,  SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
+		{ CK_ZTRIG,  VK_JOY1_LTRIG - VK_JOY1_BEGIN       },
 		{ CK_START,  SDL_CONTROLLER_BUTTON_START         },
 		{ CK_DPAD_D, SDL_CONTROLLER_BUTTON_DPAD_DOWN     },
 		{ CK_DPAD_U, SDL_CONTROLLER_BUTTON_DPAD_UP       },
@@ -252,16 +265,30 @@ void inputSetDefaultKeyBinds(s32 cidx, s32 n64mode)
 	const u32 (*joybinds)[2];
 	u32 numkbbinds;
 	u32 numjoybinds;
-	if (n64mode) {
-		kbbinds = n64kbbinds;
-		joybinds = n64joybinds;
-		numkbbinds = sizeof(n64kbbinds) / sizeof(n64kbbinds[0]);
-		numjoybinds = sizeof(n64joybinds) / sizeof(n64joybinds[0]);
-	} else {
+
+
+	switch (type) {
+
+	case PC:
 		kbbinds = pckbbinds;
 		joybinds = pcjoybinds;
 		numkbbinds = sizeof(pckbbinds) / sizeof(pckbbinds[0]);
 		numjoybinds = sizeof(pcjoybinds) / sizeof(pcjoybinds[0]);
+		break;
+
+	case XBLA:
+		kbbinds = n64kbbinds;
+		joybinds = n64xblajoybinds;
+		numkbbinds = sizeof(n64kbbinds) / sizeof(n64kbbinds[0]);
+		numjoybinds = sizeof(n64xblajoybinds) / sizeof(n64xblajoybinds[0]);
+		break;
+
+	case VANILLA:
+		kbbinds = n64kbbinds;
+		joybinds = n64vanillajoybinds;
+		numkbbinds = sizeof(n64kbbinds) / sizeof(n64kbbinds[0]);
+		numjoybinds = sizeof(n64vanillajoybinds) / sizeof(n64vanillajoybinds[0]);
+		break;
 	}
 
 	if (cidx == 0) {
