@@ -592,7 +592,7 @@ void gamefileGetOverview(char *arg0, char *name, u8 *stage, u8 *difficulty, u32 
 	*difficulty = savebufferReadBits(&buffer, 2);
 }
 
-#ifndef PLATFORM_N64
+//#ifndef PLATFORM_N64
 
 // Unlock all of the unlockables.
 // These hacks are taken from the original debug mode.
@@ -646,4 +646,4 @@ void gamefileUnlockEverything(void)
 	gamefileSetFlag(GAMEFILEFLAG_CI_UPLINK_DONE);
 }
 
-#endif
+//#endif

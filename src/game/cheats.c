@@ -859,7 +859,7 @@ char *cheatGetName(s32 cheat_id)
 }
 #endif
 
-#ifndef PLATFORM_N64
+//#ifndef PLATFORM_N64
 
 static MenuItemHandlerResult menuhandlerUnlockEverything(s32 operation, struct menuitem *item, union handlerdata *data)
 {
@@ -930,7 +930,7 @@ struct menudialogdef g_CheatsConfirmUnlockMenuDialog = {
 	NULL,
 };
 
-#endif
+//#endif
 
 struct menuitem g_CheatsFunMenuItems[] = {
 	{
