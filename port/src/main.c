@@ -36,8 +36,11 @@ u32 g_VmNumPageReplaces = 0;
 u8 g_VmShowStats = 0;
 
 s32 g_TickRateDiv = 1;
+s32 g_TickExtraSleep = true;
 
 s32 g_SkipIntro = false;
+
+s32 g_FileAutoSelect = -1;
 
 extern s32 g_StageNum;
 
@@ -105,6 +108,8 @@ int main(int argc, const char **argv)
 	audioInit();
 	romdataInit();
 
+	g_ValidGbcRomFound = romdataCheckGbcRom();
+
 	gameInit();
 
 	if (fsGetModDir()) {
@@ -142,6 +147,11 @@ int main(int argc, const char **argv)
 		sysLogPrintf(LOG_NOTE, "boot stage set to 0x%02x", g_StageNum);
 	}
 
+	g_FileAutoSelect = sysArgGetInt("--profile", -1);
+	if (g_FileAutoSelect >= 0) {
+		sysLogPrintf(LOG_NOTE, "player profile set to %d", g_FileAutoSelect);
+	}
+
 	mainProc();
 
 	return 0;
@@ -151,10 +161,13 @@ PD_CONSTRUCTOR static void gameConfigInit(void)
 {
 	configRegisterInt("Game.MemorySize", &g_OsMemSizeMb, 4, 2048);
 	configRegisterInt("Game.CenterHUD", &g_HudCenter, 0, 2);
+	configRegisterInt("Game.MenuMouseControl", &g_MenuMouseControl, 0, 1);
 	configRegisterFloat("Game.ScreenShakeIntensity", &g_ViShakeIntensityMult, 0.f, 10.f);
 	configRegisterInt("Game.TickRateDivisor", &g_TickRateDiv, 0, 10);
+	configRegisterInt("Game.ExtraSleep", &g_TickExtraSleep, 0, 1);
 	configRegisterInt("Game.SkipIntro", &g_SkipIntro, 0, 1);
 	configRegisterInt("Game.DisableMpDeathMusic", &g_MusicDisableMpDeath, 0, 1);
+	configRegisterInt("Game.GEMuzzleFlashes", &g_BgunGeMuzzleFlashes, 0, 1);
 	for (s32 j = 0; j < MAX_PLAYERS; ++j) {
 		const s32 i = j + 1;
 		configRegisterFloat(strFmt("Game.Player%d.FovY", i), &g_PlayerExtCfg[j].fovy, 5.f, 175.f);
@@ -166,5 +179,8 @@ PD_CONSTRUCTOR static void gameConfigInit(void)
 		configRegisterFloat(strFmt("Game.Player%d.CrosshairSway", i), &g_PlayerExtCfg[j].crosshairsway, 0.f, 10.f);
 		configRegisterInt(strFmt("Game.Player%d.CrouchMode", i), &g_PlayerExtCfg[j].crouchmode, 0, CROUCHMODE_TOGGLE_ANALOG);
 		configRegisterInt(strFmt("Game.Player%d.ExtendedControls", i), &g_PlayerExtCfg[j].extcontrols, 0, 1);
+		configRegisterUInt(strFmt("Game.Player%d.CrosshairColour", i), &g_PlayerExtCfg[j].crosshaircolour, 0, 0xFFFFFFFF);
+		configRegisterUInt(strFmt("Game.Player%d.CrosshairSize", i), &g_PlayerExtCfg[j].crosshairsize, 0, 4);
+		configRegisterInt(strFmt("Game.Player%d.CrosshairHealth", i), &g_PlayerExtCfg[j].crosshairhealth, 0, CROSSHAIR_HEALTH_ON_WHITE);
 	}
 }

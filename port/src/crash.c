@@ -10,7 +10,8 @@
 #include "system.h"
 #include "platform.h"
 
-#define CRASH_MAX_MSG 4096
+#define CRASH_LOG_FNAME "pd.crash.log"
+#define CRASH_MAX_MSG 8192
 #define CRASH_MAX_SYM 256
 #define CRASH_MAX_FRAMES 32
 #define CRASH_MSG(...) \
@@ -79,8 +80,8 @@ static void crashStackTrace(char *msg, PEXCEPTION_POINTERS exinfo)
 	if (SymGetLineFromAddr64(process, (uintptr_t)exinfo->ExceptionRecord->ExceptionAddress, &disp, &line)) {
 		CRASH_MSG(": %s:%lu+%lu", line.FileName, line.LineNumber, disp);
 	}
-	CRASH_MSG("\nMODULE: %p\n", crashGetModuleBase(exinfo->ExceptionRecord->ExceptionAddress));
-	CRASH_MSG("MAIN MODULE: %p\n", crashGetModuleBase(crashInit));
+	CRASH_MSG("\nMODULE: [%p]\n", crashGetModuleBase(exinfo->ExceptionRecord->ExceptionAddress));
+	CRASH_MSG("MAIN MODULE: [%p]\n", crashGetModuleBase(crashInit));
 	CRASH_MSG("\nBACKTRACE:\n");
 
 	char symbuf[sizeof(SYMBOL_INFO) + CRASH_MAX_SYM * sizeof(TCHAR)];
@@ -99,6 +100,10 @@ static void crashStackTrace(char *msg, PEXCEPTION_POINTERS exinfo)
 
 		if (SymFromAddr(process, stackframe.AddrPC.Offset, &disp64, sym)) {
 			CRASH_MSG(": %s+%llu", sym->Name, disp64);
+		} else if (process, stackframe.AddrPC.Offset) {
+			const uintptr_t modbase = (uintptr_t)crashGetModuleBase((void *)(uintptr_t)stackframe.AddrPC.Offset);
+			const uintptr_t modofs = (uintptr_t)stackframe.AddrPC.Offset - modbase;
+			CRASH_MSG(": [%p]+%p", (void *)modbase, (void *)modofs);
 		}
 
 		if(SymGetLineFromAddr64(process, stackframe.AddrPC.Offset, &disp, &line)) {
@@ -134,6 +139,15 @@ static long __stdcall crashHandler(PEXCEPTION_POINTERS exinfo)
 	fflush(stdout);
 
 	crashStackTrace(msg, exinfo);
+
+	// open log file for the crash dump if one hasn't been opened yet
+	if (!sysLogIsOpen()) {
+		FILE *f = fopen(CRASH_LOG_FNAME, "wb");
+		if (f) {
+			fprintf(f, "Crash!\n\n%s", msg);
+			fclose(f);
+		}
+	}
 
 	sysFatalError("Crash!\n\n%s", msg);
 

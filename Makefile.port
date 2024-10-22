@@ -116,14 +116,23 @@ else
 endif
 
 VERSION_HASH := $(shell git rev-parse --short HEAD)
+VERSION_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 VERSION_TARGET := $(TARGET_PLATFORM)
 VERSION_ROMID := $(ROMID)
+
+ifeq ($(VERSION_BRANCH),)
+  VERSION_BRANCH := port-custom
+endif
+ifeq ($(VERSION_BRANCH),HEAD)
+  VERSION_BRANCH := port-custom
+endif
 
 DEFINES := \
   VERSION=$(VERSION) \
   VERSION_HASH=\"$(VERSION_HASH)\" \
   VERSION_TARGET=\"$(VERSION_TARGET)\" \
   VERSION_ROMID=\"$(VERSION_ROMID)\" \
+  VERSION_BRANCH=\"$(VERSION_BRANCH)\" \
   MATCHING=0 \
   PAL=$(IS_PAL) \
   PIRACYCHECKS=0 \
@@ -142,9 +151,15 @@ G_DIR := src/generated/$(ROMID)
 
 ifneq (,$(findstring windows,$(TARGET_PLATFORM)))
   TARGET_CFLAGS := $(shell pkg-config sdl2 --cflags-only-I)
-  TARGET_LDFLAGS := $(shell pkg-config sdl2 --libs) -lz -lopengl32 -static-libstdc++ -ldbghelp
+  TARGET_LDFLAGS := $(shell pkg-config sdl2 --libs) -lz -lopengl32 -ldbghelp
   # on windows/mingw we need this to be built with a 32-bit compiler so it finds the correct libs
   TOOLCHAIN ?= i686-w64-mingw32-
+  # on GCC link libstdc++ statically
+  ifeq (,$(findstring clang,$(CC))$(findstring clang,$(CXX)))
+    TARGET_LDFLAGS += -static-libstdc++
+  else
+    TARGET_LDFLAGS += -lstdc++
+  endif
 else # assume *nix
   TARGET_CFLAGS := $(shell pkg-config sdl2 --cflags-only-I)
   TARGET_LDFLAGS := $(shell pkg-config sdl2 --libs) -lGL -lz -ldl
@@ -215,6 +230,10 @@ CXX_O_FILES := $(patsubst %.cpp, $(B_DIR)/%.o, $(CXX_FILES))
 
 O_FILES := $(C_O_FILES) $(CXX_O_FILES)
 
+ifneq (,$(findstring windows,$(TARGET_PLATFORM)))
+  O_FILES += $(B_DIR)/icon.res
+endif
+
 INCLUDES = \
   -I include \
   -I include/PR \
@@ -224,15 +243,15 @@ INCLUDES = \
   -I port/include
 
 TOOLCHAIN ?=
-CC := $(TOOLCHAIN)gcc -std=c11
-CXX := $(TOOLCHAIN)g++ -std=c++20
+CC ?= $(TOOLCHAIN)gcc
+CXX ?= $(TOOLCHAIN)g++
 ifneq (,$(CXX_O_FILES))
   LD := $(CXX)
 else
   LD := $(CC)
 endif
 
-$(C_O_FILES): OPT_LVL := $(GCC_OPT_LVL)
+$(O_FILES): OPT_LVL := $(GCC_OPT_LVL)
 
 COMMON_CFLAGS := $(C_DEFINES) -DAVOID_UB=1 $(INCLUDES) $(TARGET_CFLAGS) -g \
   -fno-inline-functions \
@@ -241,7 +260,6 @@ COMMON_CFLAGS := $(C_DEFINES) -DAVOID_UB=1 $(INCLUDES) $(TARGET_CFLAGS) -g \
   -fwrapv \
   -Wall \
   -Wno-address \
-  -Wno-aggressive-loop-optimizations \
   -Wno-int-in-bool-context \
   -Wno-misleading-indentation \
   -Wno-missing-braces \
@@ -252,8 +270,8 @@ COMMON_CFLAGS := $(C_DEFINES) -DAVOID_UB=1 $(INCLUDES) $(TARGET_CFLAGS) -g \
   -Wno-unused-variable \
   -Wno-format-truncation
 
-CFLAGS := $(COMMON_CFLAGS) -Wno-pointer-sign
-CXXFLAGS := $(COMMON_CFLAGS) -Wno-unused-function
+CFLAGS := -std=c11 $(COMMON_CFLAGS) -Wno-pointer-sign
+CXXFLAGS := -std=c++20 $(COMMON_CFLAGS) -Wno-unused-function
 LDFLAGS := $(TARGET_LDFLAGS)
 
 # Make ROMID available as an environment variable to all tooling.
@@ -262,7 +280,7 @@ export ROMID
 
 BIN := $(B_DIR)/$(BIN_NAME)
 
-default: $(JSON_HEADERS) $(BIN)
+default: $(BIN)
 
 ################################################################################
 # Asset Manager header generation
@@ -296,14 +314,20 @@ $(G_DIR)/tiles/%.h: $(A_DIR)/tiles/%.json
 
 $(BIN): $(O_FILES)
 	$(LD) $(COMMON_CFLAGS) $(OPT_LVL) -o $(BIN) $^ $(LDFLAGS)
+ifneq ($(CV2PDB),)
+	$(CV2PDB) $(BIN)
+endif
 
-$(B_DIR)/%.o: %.c
+$(B_DIR)/%.o: %.c $(JSON_HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) -c $(CFLAGS) $(OPT_LVL) -o $@ $<
 
-$(B_DIR)/%.o: %.cpp
+$(B_DIR)/%.o: %.cpp $(JSON_HEADERS)
 	@mkdir -p $(dir $@)
 	$(CXX) -c $(CXXFLAGS) $(OPT_LVL) -o $@ $<
+
+$(B_DIR)/%.res: dist/windows/%.rc
+	windres $< -O coff -o $@
 
 ################################################################################
 # Clean rules

@@ -372,6 +372,8 @@ Gfx *titleRenderLegal(Gfx *gdl)
 					elem->textptr = VERSION_HASH " (" VERSION_TARGET ")";
 				} else if (elem->textid == L_OPTIONS_083) {
 					elem->textptr = VERSION_ROMID;
+				} else if (elem->textid == L_OPTIONS_082) {
+					elem->textptr = "Perfect Dark (" VERSION_BRANCH ")";
 				}
 #endif
 				break;

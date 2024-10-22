@@ -21,12 +21,16 @@ static s32 vidWidth = 640;
 static s32 vidHeight = 480;
 static s32 vidFramebuffers = true;
 static s32 vidFullscreen = false;
+static s32 vidFullscreenExclusive = false;
+static s32 vidMaximize = false;
+static s32 vidAllowHiDpi = false;
 static s32 vidVsync = 1;
 static s32 vidMSAA = 1;
 static s32 vidFramerateLimit = 0;
 
 static s32 texFilter = FILTER_LINEAR;
 static s32 texFilter2D = true;
+static s32 texDetail = true;
 
 static u32 dlcount = 0;
 static u32 frames = 0;
@@ -42,9 +46,26 @@ s32 videoInit(void)
 	gfx_current_native_viewport.height = 220;
 	gfx_current_native_aspect = 320.f / 220.f;
 	gfx_framebuffers_enabled = (bool)vidFramebuffers;
+	gfx_detail_textures_enabled = (bool)texDetail;
 	gfx_msaa_level = vidMSAA;
 
-	gfx_init(wmAPI, renderingAPI, "PD", vidFullscreen, vidWidth, vidHeight, 100, 100);
+	struct GfxInitSettings set = {
+		.wapi = wmAPI,
+		.rapi = renderingAPI,
+		.window_settings = {
+			.title = "Perfect Dark",
+			.width = vidWidth,
+			.height = vidHeight,
+			.x = 100,
+			.y = 100,
+			.fullscreen = vidFullscreen,
+			.fullscreen_is_exclusive = vidFullscreenExclusive,
+			.maximized = vidMaximize,
+			.allow_hidpi = vidAllowHiDpi
+		}
+	};
+
+	gfx_init(&set);
 
 	if (!wmAPI->set_swap_interval(vidVsync)) {
 		vidVsync = 0;
@@ -56,7 +77,7 @@ s32 videoInit(void)
 	}
 
 	wmAPI->set_target_fps(vidFramerateLimit); // disabled because vsync is on
-	renderingAPI->set_texture_filter((enum FilteringMode)texFilter);
+	gfx_set_texture_filter((enum FilteringMode)texFilter);
 
 	initDone = true;
 	return 0;
@@ -147,12 +168,17 @@ s32 videoGetFullscreen(void)
 	return vidFullscreen;
 }
 
+s32 videoGetMaximizeWindow(void)
+{
+	return vidMaximize;
+}
+
 f32 videoGetAspect(void)
 {
 	return gfx_current_dimensions.aspect_ratio;
 }
 
-u32 videoGetTextureFilter2D(void)
+s32 videoGetTextureFilter2D(void)
 {
 	return texFilter2D;
 }
@@ -160,6 +186,11 @@ u32 videoGetTextureFilter2D(void)
 u32 videoGetTextureFilter(void)
 {
 	return texFilter;
+}
+
+s32 videoGetDetailTextures(void)
+{
+	return texDetail;
 }
 
 void videoSetWindowOffset(s32 x, s32 y)
@@ -176,16 +207,31 @@ void videoSetFullscreen(s32 fs)
 	}
 }
 
+void videoSetMaximizeWindow(s32 fs)
+{
+	if (fs != vidMaximize) {
+		vidMaximize = !!fs;
+		wmAPI->set_maximize(vidMaximize);
+	}
+}
+
 void videoSetTextureFilter(u32 filter)
 {
 	if (filter > FILTER_THREE_POINT) filter = FILTER_THREE_POINT;
+	if (texFilter == filter) return;
 	texFilter = filter;
-	renderingAPI->set_texture_filter((enum FilteringMode)filter);
+	gfx_set_texture_filter((enum FilteringMode)filter);
 }
 
-void videoSetTextureFilter2D(u32 filter)
+void videoSetTextureFilter2D(s32 filter)
 {
 	texFilter2D = !!filter;
+}
+
+void videoSetDetailTextures(s32 detail)
+{
+	texDetail = !!detail;
+	gfx_detail_textures_enabled = (bool)texDetail;
 }
 
 s32 videoCreateFramebuffer(u32 w, u32 h, s32 upscale, s32 autoresize)
@@ -232,12 +278,16 @@ void videoFreeCachedTexture(const void *texptr)
 PD_CONSTRUCTOR static void videoConfigInit(void)
 {
 	configRegisterInt("Video.DefaultFullscreen", &vidFullscreen, 0, 1);
+	configRegisterInt("Video.DefaultMaximize", &vidMaximize, 0, 1);
 	configRegisterInt("Video.DefaultWidth", &vidWidth, 0, 32767);
 	configRegisterInt("Video.DefaultHeight", &vidHeight, 0, 32767);
+	configRegisterInt("Video.ExclusiveFullscreen", &vidFullscreenExclusive, 0, 1);
+	configRegisterInt("Video.AllowHiDpi", &vidAllowHiDpi, 0, 1);
 	configRegisterInt("Video.VSync", &vidVsync, -1, 10);
 	configRegisterInt("Video.FramebufferEffects", &vidFramebuffers, 0, 1);
 	configRegisterInt("Video.FramerateLimit", &vidFramerateLimit, 0, VIDEO_MAX_FPS);
 	configRegisterInt("Video.MSAA", &vidMSAA, 1, 16);
 	configRegisterInt("Video.TextureFilter", &texFilter, 0, 2);
 	configRegisterInt("Video.TextureFilter2D", &texFilter2D, 0, 1);
+	configRegisterInt("Video.DetailTextures", &texDetail, 0, 1);
 }

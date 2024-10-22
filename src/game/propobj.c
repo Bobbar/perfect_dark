@@ -20979,7 +20979,7 @@ Gfx *countdownTimerRender(Gfx *gdl)
 		ms = (s32)floorf(value60 * 1.6666666269302f) - mins * 6000 - secs * 100;
 
 #ifndef PLATFORM_N64
-		if (playercount == 1) {
+		if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 			gSPSetExtraGeometryModeEXT(gdl++, G_ASPECT_CENTER_EXT);
 		}
 #endif

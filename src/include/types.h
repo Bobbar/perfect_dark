@@ -4991,6 +4991,12 @@ struct menuinputs {
 	/*0x0c*/ s32 unk0c;
 	/*0x10*/ s32 unk10;
 	/*0x14*/ u8 unk14;
+#ifndef PLATFORM_N64
+	/*0x15*/ u8 mousemoved;
+	/*0x16*/ s8 mousescroll;
+	/*0x18*/ s32 mousex;
+	/*0x1c*/ s32 mousey;
+#endif
 };
 
 struct mpconfigsim {
@@ -6139,6 +6145,9 @@ struct extplayerconfig {
 	f32 radialmenuspeed;
 	f32 crosshairsway;
 	s32 extcontrols;
+	u32 crosshaircolour;
+	u32 crosshairsize;
+	s32 crosshairhealth;
 };
 
 #endif

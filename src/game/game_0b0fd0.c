@@ -291,6 +291,13 @@ bool weaponHasFlag(s32 itemid, u32 flag)
 		return false;
 	}
 
+#ifndef PLATFORM_N64
+	// always dual-wieldable if cheat is enabled
+	if (cheatIsActive(CHEAT_DUALWIELDALLGUNS) && (flag == WEAPONFLAG_DUALWIELD)) {
+		return true;
+	}
+#endif
+
 	return (weapon->flags & flag) != 0;
 }
 
@@ -398,9 +405,11 @@ u16 weaponGetFileNum(s32 weaponnum)
 	}
 
 	if (weapon) {
+#ifdef PLATFORM_N64
 		if (PLAYERCOUNT() >= 2) {
 			return weapon->lo_model;
 		}
+#endif
 
 		return weapon->hi_model;
 	}

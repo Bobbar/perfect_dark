@@ -2592,6 +2592,16 @@ MenuItemHandlerResult filemgrChooseAgentListMenuHandler(s32 operation, struct me
 				}
 			}
 		}
+
+#ifndef PLATFORM_N64
+		if (g_FileAutoSelect >= 0 && g_FileLists[0] && g_FileLists[0]->numfiles > 0) {
+			const u32 tmp = data->list.value;
+			data->list.value = g_FileAutoSelect;
+			g_FileAutoSelect = -1;
+			filemgrChooseAgentListMenuHandler(MENUOP_SET, item, data);
+			data->list.value = tmp;
+		}
+#endif
 		break;
 	case MENUOP_GETOPTIONCOUNT:
 		data->list.value = g_FileLists[0]->numfiles + 1;

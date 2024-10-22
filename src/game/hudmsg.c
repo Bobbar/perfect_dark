@@ -190,7 +190,7 @@ Gfx *hudmsgRenderMissionTimer(Gfx *gdl, u32 alpha)
 	y = timery;
 
 #ifndef PLATFORM_N64
-	if (PLAYERCOUNT() < 2) {
+	if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 		gSPExtraGeometryModeEXT(gdl++, G_ASPECT_MODE_EXT, g_HudAlignModeL);
 	}
 #endif
@@ -282,7 +282,7 @@ Gfx *hudmsgRenderZoomRange(Gfx *gdl, u32 alpha)
 	y2 = y + textheight;
 
 #ifndef PLATFORM_N64
-	if (playercount == 1) {
+	if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 		gSPSetExtraGeometryModeEXT(gdl++, G_ASPECT_CENTER_EXT);
 	}
 #endif
@@ -1450,7 +1450,8 @@ Gfx *hudmsgsRender(Gfx *gdl)
 		}
 
 #ifndef PLATFORM_N64
-		if (playercount < 2 && msg->state >= HUDMSGSTATE_FADINGIN) {
+		const bool doaspectfix = (playercount < 2) || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL);
+		if (doaspectfix && msg->state >= HUDMSGSTATE_FADINGIN) {
 			if (msg->alignh == HUDMSGALIGN_SCREENLEFT || msg->alignh == HUDMSGALIGN_LEFT) {
 				gSPExtraGeometryModeEXT(gdl++, G_ASPECT_MODE_EXT, g_HudAlignModeL);
 			} else if (msg->alignh == HUDMSGALIGN_RIGHT) {

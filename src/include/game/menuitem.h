@@ -32,6 +32,10 @@ Gfx *menuitemLabelRender(Gfx *gdl, struct menurendercontext *context);
 
 Gfx *menuitemMeterRender(Gfx *gdl, struct menurendercontext *context);
 
+#ifndef PLATFORM_N64
+Gfx *menuitemColorBoxRender(Gfx *gdl, struct menurendercontext *context);
+#endif
+
 Gfx *menuitemSelectableRender(Gfx *gdl, struct menurendercontext *context);
 bool menuitemSelectableTick(struct menuitem *item, struct menuinputs *inputs, u32 tickflags);
 
@@ -78,5 +82,9 @@ Gfx *menuitemRender(Gfx *gdl, struct menurendercontext *context);
 bool menuitemTick(struct menuitem *item, struct menudialog *dialog, struct menuinputs *inputs, u32 tickflags, union menuitemdata *data);
 void menuitemInit(struct menuitem *item, union menuitemdata *data);
 Gfx *menuitemOverlay(Gfx *gdl, s16 x, s16 y, s16 x2, s16 y2, struct menuitem *item, struct menudialog *dialog, union menuitemdata *data);
+
+#ifndef PLATFORM_N64
+s32 menuitemGetTop(struct menuitem *item, struct menudialog *dialog);
+#endif
 
 #endif

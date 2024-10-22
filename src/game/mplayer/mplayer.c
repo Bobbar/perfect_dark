@@ -92,7 +92,12 @@ struct mpweapon g_MpWeapons[NUM_MPWEAPONS] = {
 	/*0x1f*/ { WEAPON_PROXIMITYMINE,    AMMOTYPE_PROXY_MINE,  5,   0,                   0,  0, MPFEATURE_WEAPON_PROXIMITYMINE,   MODEL_CHRPROXIMITYMINE, 384 },
 	/*0x20*/ { WEAPON_REMOTEMINE,       AMMOTYPE_REMOTE_MINE, 5,   0,                   0,  0, MPFEATURE_WEAPON_REMOTEMINE,      MODEL_CHRREMOTEMINE,    384 },
 	/*0x21*/ { WEAPON_LASER,            0,                    0,   0,                   0,  1, MPFEATURE_WEAPON_LASER,           MODEL_CHRLASER,         512 },
+#ifndef PLATFORM_N64
+	// fix X-Ray Scanner model
+	/*0x22*/ { WEAPON_XRAYSCANNER,      0,                    0,   0,                   0,  1, MPFEATURE_WEAPON_XRAYSCANNER,     MODEL_XRAYSPECS,        256 },
+#else
 	/*0x22*/ { WEAPON_XRAYSCANNER,      0,                    0,   0,                   0,  1, MPFEATURE_WEAPON_XRAYSCANNER,     MODEL_CHRNIGHTSIGHT,    256 },
+#endif
 	/*0x23*/ { WEAPON_CLOAKINGDEVICE,   0,                    0,   0,                   0,  1, MPFEATURE_WEAPON_CLOAKINGDEVICE,  MODEL_CHRCLOAKER,       256 },
 	/*0x24*/ { WEAPON_COMBATBOOST,      0,                    0,   0,                   0,  1, MPFEATURE_WEAPON_COMBATBOOST,     MODEL_CHRSPEEDPILL,     256 },
 #ifndef PLATFORM_N64
@@ -122,6 +127,9 @@ struct mpweapon g_MpWeapons[NUM_MPWEAPONS] = {
 	.crosshairsway = 1.f, \
 	.crouchmode = CROUCHMODE_TOGGLE_ANALOG, \
 	.extcontrols = true, \
+	.crosshaircolour = 0x00ff0028, \
+	.crosshairsize = 2, \
+	.crosshairhealth = CROSSHAIR_HEALTH_OFF, \
 }
 
 struct extplayerconfig g_PlayerExtCfg[MAX_PLAYERS] = { 
@@ -175,6 +183,15 @@ void mpStartMatch(void)
 	s32 i;
 	s32 numplayers = 0;
 	s32 stagenum;
+
+#ifndef PLATFORM_N64
+	if (g_MpSetup.options & MPOPTION_AUTORANDOMWEAPON_START) {
+		if (g_MpWeaponSetNum == WEAPONSET_RANDOM
+				|| g_MpWeaponSetNum == WEAPONSET_RANDOMFIVE) {
+			mpApplyWeaponSet();
+		}
+	}
+#endif
 
 	mpConfigureQuickTeamSimulants();
 
@@ -520,6 +537,10 @@ void mpInit(void)
 		| MPOPTION_HTM_SHOWONRADAR
 		| MPOPTION_PAC_HIGHLIGHTTARGET
 		| MPOPTION_PAC_SHOWONRADAR;
+
+#ifndef PLATFORM_N64
+	g_MpSetup.options |= MPOPTION_FRIENDLYFIRE;
+#endif
 
 	g_Vars.mphilltime = 10;
 
@@ -1502,7 +1523,7 @@ struct mpweaponset g_MpWeaponSets[12] = {
 	{ /*0x08*/ L_MPWEAPONS_047, { WEAPON_MAGSEC4,          WEAPON_CMP150,      WEAPON_AR34,        WEAPON_DEVASTATOR,     WEAPON_MPSHIELD, WEAPON_DISABLED }, { MPFEATURE_WEAPON_DEVASTATOR,      0,                           0,                              0                       }, WEAPON_DISABLED,    WEAPON_DISABLED,    WEAPON_DISABLED,  WEAPON_DISABLED,       WEAPON_DISABLED, WEAPON_DISABLED }, // Grenade Launcher
 	{ /*0x09*/ L_MPWEAPONS_046, { WEAPON_MAULER,           WEAPON_CYCLONE,     WEAPON_DRAGON,      WEAPON_ROCKETLAUNCHER, WEAPON_MPSHIELD, WEAPON_DISABLED }, { MPFEATURE_WEAPON_MAULER,          0,                           0,                              0                       }, WEAPON_FALCON2,     WEAPON_CYCLONE,     WEAPON_DRAGON,    WEAPON_ROCKETLAUNCHER, WEAPON_MPSHIELD, WEAPON_DISABLED }, // Rocket Launcher
 	{ /*0x0a*/ L_MPWEAPONS_045, { WEAPON_MAGSEC4,          WEAPON_LAPTOPGUN,   WEAPON_K7AVENGER,   WEAPON_PROXIMITYMINE,  WEAPON_MPSHIELD, WEAPON_DISABLED }, { MPFEATURE_WEAPON_LAPTOPGUN,       MPFEATURE_WEAPON_K7AVENGER,  MPFEATURE_WEAPON_PROXIMITYMINE, 0                       }, WEAPON_DISABLED,    WEAPON_DISABLED,    WEAPON_DISABLED,  WEAPON_DISABLED,       WEAPON_DISABLED, WEAPON_DISABLED }, // Proximity Mine
-#if VERSION == VERSION_JPN_FINAL
+#if (VERSION == VERSION_JPN_FINAL) && defined(PLATFORM_N64)
 	{ /*0x0b*/ L_MPWEAPONS_044, { WEAPON_TIMEDMINE,        WEAPON_CROSSBOW,    WEAPON_TIMEDMINE,   WEAPON_CROSSBOW,       WEAPON_MPSHIELD, WEAPON_DISABLED }, { MPFEATURE_WEAPON_CROSSBOW,        0,                           0,                              0                       }, WEAPON_TIMEDMINE,   WEAPON_TIMEDMINE,   WEAPON_TIMEDMINE, WEAPON_TIMEDMINE,      WEAPON_MPSHIELD, WEAPON_DISABLED }, // Close Combat
 #else
 	{ /*0x0b*/ L_MPWEAPONS_044, { WEAPON_COMBATKNIFE,      WEAPON_COMBATKNIFE, WEAPON_TIMEDMINE,   WEAPON_CROSSBOW,       WEAPON_MPSHIELD, WEAPON_DISABLED }, { MPFEATURE_WEAPON_CROSSBOW,        0,                           0,                              0                       }, WEAPON_COMBATKNIFE, WEAPON_COMBATKNIFE, WEAPON_TIMEDMINE, WEAPON_TIMEDMINE,      WEAPON_MPSHIELD, WEAPON_DISABLED }, // Close Combat
@@ -2450,6 +2471,15 @@ void mpEndMatch(void)
 		challengeConsiderMarkingComplete();
 	}
 
+#ifndef PLATFORM_N64
+	if (g_MpSetup.options & MPOPTION_AUTORANDOMWEAPON_END) {
+		if (g_MpWeaponSetNum == WEAPONSET_RANDOM
+				|| g_MpWeaponSetNum == WEAPONSET_RANDOMFIVE) {
+			mpApplyWeaponSet();
+		}
+	}
+#endif
+
 	func0f0f820c(NULL, -6);
 }
 
@@ -2717,6 +2747,11 @@ struct mptrack g_MpTracks[] = {
 	/*0x27*/ { MUSIC_SKEDARRUINS,     120, L_MISC_163, SOLOSTAGEINDEX_SKEDARRUINS }, // "Skedar Ruins"
 	/*0x28*/ { MUSIC_SKEDARRUINS_X,   120, L_MISC_164, SOLOSTAGEINDEX_SKEDARRUINS }, // "Skedar Ruins X"
 	/*0x29*/ { MUSIC_CREDITS,         120, L_MISC_165, SOLOSTAGEINDEX_SKEDARRUINS }, // "End Credits"
+#if VERSION < VERSION_PAL_BETA
+	/*0x2a*/ { MUSIC_SKEDARRUINS_KING,120, L_MISC_261, SOLOSTAGEINDEX_SKEDARRUINS }, // "Skedar Warrior" (Skedar Leader)
+#else
+	/*0x2a*/ { MUSIC_SKEDARRUINS_KING,120, L_MISC_041, SOLOSTAGEINDEX_SKEDARRUINS }, // "E R R O R" (can't find a good approximation for Skedar Leader)
+#endif
 };
 
 bool mpIsTrackUnlocked(s32 tracknum)
@@ -3110,6 +3145,21 @@ void mpRemoveSimulant(s32 index)
 	func0f1881d4(index);
 	mpGenerateBotNames();
 }
+
+#ifndef PLATFORM_N64
+void mpCopySimulant(s32 index)
+{
+	s32 dest = mpGetSlotForNewBot();
+
+	g_MpSetup.chrslots |= 1 << (dest + 4);
+	g_BotConfigsArray[dest].base.name[0] = g_BotConfigsArray[index].base.name[0];
+	g_BotConfigsArray[dest].base.mpheadnum = g_BotConfigsArray[index].base.mpheadnum;
+	g_BotConfigsArray[dest].base.mpbodynum = g_BotConfigsArray[index].base.mpbodynum;
+	g_BotConfigsArray[dest].type = g_BotConfigsArray[index].type;
+	g_BotConfigsArray[dest].difficulty = g_BotConfigsArray[index].difficulty;
+	mpGenerateBotNames();
+}
+#endif
 
 bool mpHasSimulants(void)
 {

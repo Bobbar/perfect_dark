@@ -119,13 +119,40 @@ static MenuItemHandlerResult menuhandlerMouseAimLock(s32 operation, struct menui
 	return 0;
 }
 
-static MenuItemHandlerResult menuhandlerMouseDefaultLocked(s32 operation, struct menuitem *item, union handlerdata *data)
+static MenuItemHandlerResult menuhandlerMouseLockMode(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	static const char *opts[] = {
+		"Always Off",
+		"Always On",
+		"Auto"
+	};
+
+	switch (operation) {
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = ARRAYCOUNT(opts);
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		return (intptr_t)opts[data->dropdown.value];
+	case MENUOP_SET:
+		inputSetMouseLockMode(data->checkbox.value);
+		break;
+	case MENUOP_GETSELECTEDINDEX:
+		data->dropdown.value = inputGetMouseLockMode();
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerMenuMouseControl(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	switch (operation) {
 	case MENUOP_GET:
-		return inputGetMouseDefaultLocked();
+		return g_MenuMouseControl;
 	case MENUOP_SET:
-		inputSetMouseDefaultLocked(data->checkbox.value);
+		g_MenuMouseControl = data->checkbox.value;
+		if (!g_MenuMouseControl) {
+			g_MenuUsingMouse = false;
+		}
 		break;
 	}
 
@@ -258,12 +285,20 @@ struct menuitem g_ExtendedMouseMenuItems[] = {
 		menuhandlerMouseAimLock,
 	},
 	{
+		MENUITEMTYPE_DROPDOWN,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Mouse Lock Mode",
+		0,
+		menuhandlerMouseLockMode,
+	},
+	{
 		MENUITEMTYPE_CHECKBOX,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
-		(uintptr_t)"Grab Mouse Input by Default",
+		(uintptr_t)"Mouse Menu Navigation",
 		0,
-		menuhandlerMouseDefaultLocked,
+		menuhandlerMenuMouseControl,
 	},
 	{
 		MENUITEMTYPE_SEPARATOR,
@@ -652,13 +687,50 @@ static MenuItemHandlerResult menuhandlerFullScreen(s32 operation, struct menuite
 	return 0;
 }
 
-static MenuItemHandlerResult menuhandlerTexFilter(s32 operation, struct menuitem *item, union handlerdata *data)
+static MenuItemHandlerResult menuhandlerMaximizeWindow(s32 operation, struct menuitem *item, union handlerdata *data)
 {
 	switch (operation) {
 	case MENUOP_GET:
-		return (videoGetTextureFilter() != 0);
+		return videoGetMaximizeWindow();
 	case MENUOP_SET:
-		videoSetTextureFilter(data->checkbox.value);
+		videoSetMaximizeWindow(data->checkbox.value);
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerTexFilter(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	static const char *opts[] = {
+		"Nearest",
+		"Bilinear",
+		"Three Point"
+	};
+
+	switch (operation) {
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = ARRAYCOUNT(opts);
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		return (intptr_t)opts[data->dropdown.value];
+	case MENUOP_SET:
+		videoSetTextureFilter(data->dropdown.value);
+		break;
+	case MENUOP_GETSELECTEDINDEX:
+		data->dropdown.value = videoGetTextureFilter();
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerTexDetail(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	switch (operation) {
+	case MENUOP_GET:
+		return (videoGetDetailTextures() != 0);
+	case MENUOP_SET:
+		videoSetDetailTextures(data->checkbox.value);
 		break;
 	}
 
@@ -672,6 +744,19 @@ static MenuItemHandlerResult menuhandlerTexFilter2D(s32 operation, struct menuit
 		return videoGetTextureFilter2D();
 	case MENUOP_SET:
 		videoSetTextureFilter2D(data->checkbox.value);
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerGeMuzzleFlashes(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	switch (operation) {
+	case MENUOP_GET:
+		return g_BgunGeMuzzleFlashes;
+	case MENUOP_SET:
+		g_BgunGeMuzzleFlashes = data->checkbox.value;
 		break;
 	}
 
@@ -739,6 +824,22 @@ struct menuitem g_ExtendedVideoMenuItems[] = {
 		MENUITEMTYPE_CHECKBOX,
 		0,
 		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Maximize Window",
+		0,
+		menuhandlerMaximizeWindow,
+	},
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Detail Textures",
+		0,
+		menuhandlerTexDetail,
+	},
+	{
+		MENUITEMTYPE_DROPDOWN,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
 		(uintptr_t)"Texture Filtering",
 		0,
 		menuhandlerTexFilter,
@@ -750,6 +851,14 @@ struct menuitem g_ExtendedVideoMenuItems[] = {
 		(uintptr_t)"GUI Texture Filtering",
 		0,
 		menuhandlerTexFilter2D,
+	},
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"GE64-style Muzzle Flashes",
+		0,
+		menuhandlerGeMuzzleFlashes,
 	},
 	{
 		MENUITEMTYPE_DROPDOWN,
@@ -903,6 +1012,202 @@ static MenuItemHandlerResult menuhandlerCrosshairSway(s32 operation, struct menu
 	return 0;
 }
 
+static MenuItemHandlerResult menuhandlerCrosshairR(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	u32 newColor;
+
+	switch (operation) {
+	case MENUOP_GETSLIDER:
+		data->slider.value = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour >> 24) & 0xFF;
+		break;
+
+	case MENUOP_SET:
+		newColor = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour & 0xFFFFFF) | data->slider.value << 24;
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour = newColor;
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairG(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	u32 newColor;
+
+	switch (operation) {
+	case MENUOP_GETSLIDER:
+		data->slider.value = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour >> 16) & 0xFF;
+		break;
+
+	case MENUOP_SET:
+		newColor = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour & 0xFF00FFFF) | data->slider.value << 16;
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour = newColor;
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairB(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	u32 newColor;
+
+	switch (operation) {
+	case MENUOP_GETSLIDER:
+		data->slider.value = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour >> 8) & 0xFF;
+		break;
+
+	case MENUOP_SET:
+		newColor = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour & 0xFFFF00FF) | data->slider.value << 8;
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour = newColor;
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairA(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	u32 newColor;
+
+	switch (operation) {
+	case MENUOP_GETSLIDER:
+		data->slider.value = g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour & 0xFF;
+		break;
+
+	case MENUOP_SET:
+		newColor = (g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour & 0xFFFFFF00) | data->slider.value;
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour = newColor;
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairColorPreview(s32 operation, struct menuitem* item, union handlerdata* data)
+{
+	if (operation == MENUOP_GETCOLOUR) {
+		data->label.colour1 = g_PlayerExtCfg[g_ExtMenuPlayer].crosshaircolour;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairSize(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	switch (operation) {
+	case MENUOP_GETSLIDER:
+		data->slider.value = g_PlayerExtCfg[g_ExtMenuPlayer].crosshairsize;
+		break;
+	case MENUOP_SET:
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshairsize = data->slider.value;
+		break;
+	}
+
+	return 0;
+}
+
+static MenuItemHandlerResult menuhandlerCrosshairHealth(s32 operation, struct menuitem *item, union handlerdata *data)
+{
+	static const char *opts[] = {
+		"Off",
+		"On (Green)",
+		"On (White)"
+	};
+
+	switch (operation) {
+	case MENUOP_GETOPTIONCOUNT:
+		data->dropdown.value = ARRAYCOUNT(opts);
+		break;
+	case MENUOP_GETOPTIONTEXT:
+		return (intptr_t)opts[data->dropdown.value];
+	case MENUOP_SET:
+		g_PlayerExtCfg[g_ExtMenuPlayer].crosshairhealth = data->dropdown.value;
+		break;
+	case MENUOP_GETSELECTEDINDEX:
+		data->dropdown.value = g_PlayerExtCfg[g_ExtMenuPlayer].crosshairhealth;
+	}
+
+	return 0;
+}
+
+struct menuitem g_ExtendedGameCrosshairColourMenuItems[] = {
+	{
+		MENUITEMTYPE_SLIDER,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SLIDER_WIDE,
+		(uintptr_t)"Red",
+		255,
+		menuhandlerCrosshairR,
+	},
+	{
+		MENUITEMTYPE_SLIDER,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SLIDER_WIDE,
+		(uintptr_t)"Green",
+		255,
+		menuhandlerCrosshairG,
+	},
+	{
+		MENUITEMTYPE_SLIDER,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SLIDER_WIDE,
+		(uintptr_t)"Blue",
+		255,
+		menuhandlerCrosshairB,
+	},
+	{
+		MENUITEMTYPE_SLIDER,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SLIDER_WIDE,
+		(uintptr_t)"Alpha",
+		255,
+		menuhandlerCrosshairA,
+	},
+	{
+		MENUITEMTYPE_SEPARATOR,
+		0,
+		0,
+		0,
+		0,
+		NULL,
+	},
+	{
+		MENUITEMTYPE_COLORBOX,
+		0,
+		0,
+		0,
+		0,
+		menuhandlerCrosshairColorPreview,
+	},
+	{
+		MENUITEMTYPE_SEPARATOR,
+		0,
+		0,
+		0,
+		0,
+		NULL,
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_SELECTABLE_CLOSESDIALOG,
+		L_OPTIONS_213, // "Back"
+		0,
+		NULL,
+	},
+	{ MENUITEMTYPE_END },
+};
+
+struct menudialogdef g_ExtendedGameCrosshairColourMenuDialog = {
+	MENUDIALOGTYPE_DEFAULT,
+	(uintptr_t)"Crosshair Colour",
+	g_ExtendedGameCrosshairColourMenuItems,
+	NULL,
+	MENUDIALOGFLAG_LITERAL_TEXT,
+	NULL,
+};
+
 struct menuitem g_ExtendedGameMenuItems[] = {
 	{
 		MENUITEMTYPE_DROPDOWN,
@@ -927,6 +1232,30 @@ struct menuitem g_ExtendedGameMenuItems[] = {
 		(uintptr_t)"Crosshair Sway",
 		20,
 		menuhandlerCrosshairSway,
+	},
+	{
+		MENUITEMTYPE_SLIDER,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SLIDER_WIDE,
+		(uintptr_t)"Crosshair Size",
+		4,
+		menuhandlerCrosshairSize,
+	},
+	{
+		MENUITEMTYPE_SELECTABLE,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT | MENUITEMFLAG_SELECTABLE_OPENSDIALOG,
+		(uintptr_t)"Crosshair Colour\n",
+		0,
+		(void*)&g_ExtendedGameCrosshairColourMenuDialog,
+	},
+	{
+		MENUITEMTYPE_DROPDOWN,
+		0,
+		MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Crosshair Colour by Health",
+		0,
+		menuhandlerCrosshairHealth,
 	},
 	{
 		MENUITEMTYPE_SEPARATOR,
@@ -1030,6 +1359,8 @@ static const struct menubind menuBinds[] = {
 	{ CK_8000,   "Cycle Crouch [+]\n",  "N64 Ext 8000\n" },
 	{ CK_4000,   "Half Crouch [+]\n",   "N64 Ext 4000\n" },
 	{ CK_2000,   "Full Crouch [+]\n",   "N64 Ext 2000\n" },
+	{ CK_ACCEPT, "UI Accept [+]\n",     "EXT UI Accept\n" },
+	{ CK_CANCEL, "UI Cancel [+]\n",     "EXT UI Cancel\n" },
 };
 
 static const char *menutextBind(struct menuitem *item);
@@ -1048,6 +1379,8 @@ static MenuItemHandlerResult menuhandlerResetBindsN64(s32 operation, struct menu
 	}
 
 struct menuitem g_ExtendedBindsMenuItems[] = {
+	DEFINE_MENU_BIND(),
+	DEFINE_MENU_BIND(),
 	DEFINE_MENU_BIND(),
 	DEFINE_MENU_BIND(),
 	DEFINE_MENU_BIND(),

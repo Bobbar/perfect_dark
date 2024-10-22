@@ -23,6 +23,55 @@
 #include <math.h>
 #include "video.h"
 
+#define SIGHT_COLOUR ((PLAYER_EXTCFG().crosshairhealth >= CROSSHAIR_HEALTH_ON_GREEN) ? sightGetCrosshairHealthColor(g_Vars.currentplayer->bondhealth, g_Vars.currentplayer->prop->chr->cshield * 0.125f) : PLAYER_EXTCFG().crosshaircolour)
+#define SIGHT_SCALE PLAYER_EXTCFG().crosshairsize
+
+static u32 sightGetCrosshairHealthColor(float health, float shield)
+{
+	const float ratio = MAX(0.0f, MIN(health + shield, 2.0f));
+
+	int red = 0;
+	int green = 0;
+	int blue = 0;
+	if (ratio < 0.2f) {
+		// Red (critical health level)
+		red = 255;
+		green = 0;
+		blue = 0;
+	} else if (ratio < 0.6f) {
+		// Red-yellow
+		red = 255;
+		green = 255 * ((ratio - 0.2f) / 0.4f);
+		blue = 0;
+	} else if (ratio < 1.0f) {
+		if (PLAYER_EXTCFG().crosshairhealth == CROSSHAIR_HEALTH_ON_GREEN) {
+			// Yellow-green
+			red = 255 * ((ratio - 0.6f) / 0.4f);
+			green = 255;
+			blue = 0;
+		} else {
+			// Yellow-white
+			red = 255;
+			green = 255;
+			blue = 255 * ((ratio - 0.6f) / 0.4f);
+		}
+	} else {
+		if (PLAYER_EXTCFG().crosshairhealth == CROSSHAIR_HEALTH_ON_GREEN) {
+			// Green-cyan (overheal via shield)
+			red = 0;
+			green = 255;
+			blue = 255 * (ratio - 1.0f);
+		} else {
+			// White-green (overheal via shield)
+			red = 255 * (2.0f - ratio);
+			green = 255;
+			blue = 255 * (2.0f - ratio);
+		}
+	}
+
+	return (red << 24) + (green << 16) + (blue << 8) + (PLAYER_EXTCFG().crosshaircolour & 0xff);
+}
+
 static inline f32 sightGetScaleX(void)
 {
 	return (videoGetAspect() / SCREEN_ASPECT);
@@ -36,6 +85,8 @@ static inline s32 sightGetAdjustedX(const f32 x)
 
 #else
 
+#define SIGHT_COLOUR 0x00ff0028
+#define SIGHT_SCALE 2
 #define sightGetScaleX() 1.f
 #define sightGetAdjustedX(x) (x)
 
@@ -459,7 +510,7 @@ Gfx *sightDrawAimer(Gfx *gdl, s32 x, s32 y, s32 radius, s32 cornergap, u32 colou
 	s32 viewright = viewleft + viewwidth - 1;
 	s32 viewbottom = viewtop + viewheight - 1;
 
-	gdl = textSetPrimColour(gdl, 0x00ff0028);
+	gdl = textSetPrimColour(gdl, SIGHT_COLOUR);
 
 #ifndef PLATFORM_N64
 	x = sightGetAdjustedX(x);
@@ -619,7 +670,7 @@ Gfx *sightDrawDelayedAimer(Gfx *gdl, s32 x, s32 y, s32 radius, s32 cornergap, u3
 	boxx = xpos;
 	boxy = ypos;
 
-	gdl = textSetPrimColour(gdl, 0x00ff0028);
+	gdl = textSetPrimColour(gdl, SIGHT_COLOUR);
 
 	// Fill a 3x3 box at the live crosshair
 	gDPHudRectangle(gdl++, x - 1, y - 1, x + 1, y - 1);
@@ -677,7 +728,7 @@ Gfx *sightDrawDefault(Gfx *gdl, bool sighton)
 		// SIGHTTRACKTYPE_NONE is used for unarmed, but this appears to be
 		// unreachable. The aimer is never drawn when unarmed.
 		if (sighton) {
-			colour = 0x00ff0028;
+			colour = SIGHT_COLOUR;
 			radius = 8;
 			cornergap = 5;
 			gdl = sightDrawAimer(gdl, x, y, radius, cornergap, colour);
@@ -687,7 +738,7 @@ Gfx *sightDrawDefault(Gfx *gdl, bool sighton)
 		// For most guns, render the aimer if holding R
 		if (sighton) {
 			if (g_Vars.currentplayer->lookingatprop.prop == NULL) {
-				colour = 0x00ff0028;
+				colour = SIGHT_COLOUR;
 				radius = 8;
 				cornergap = 5;
 			} else {
@@ -716,7 +767,7 @@ Gfx *sightDrawDefault(Gfx *gdl, bool sighton)
 			s32 texty;
 
 			if (g_Vars.currentplayer->lookingatprop.prop == NULL) {
-				colour = 0x00ff0028;
+				colour = SIGHT_COLOUR;
 				radius = 8;
 				cornergap = 5;
 			} else {
@@ -761,7 +812,7 @@ Gfx *sightDrawDefault(Gfx *gdl, bool sighton)
 
 		if (sighton) {
 			if (g_Vars.currentplayer->lookingatprop.prop == NULL) {
-				colour = 0x00ff0028;
+				colour = SIGHT_COLOUR;
 				radius = 8;
 				cornergap = 5;
 			} else {
@@ -832,7 +883,7 @@ Gfx *sightDrawDefault(Gfx *gdl, bool sighton)
 
 		if (sighton) {
 			if (g_Vars.currentplayer->lookingatprop.prop == NULL) {
-				colour = 0x00ff0028;
+				colour = SIGHT_COLOUR;
 				radius = 8;
 				cornergap = 5;
 			} else {
@@ -1252,7 +1303,7 @@ Gfx *sightDrawZoom(Gfx *gdl, bool sighton)
 
 	if (showzoomrange) {
 		gdl = text0f153628(gdl);
-		gdl = textSetPrimColour(gdl, 0x00ff0028);
+		gdl = textSetPrimColour(gdl, SIGHT_COLOUR);
 
 		if (frac < 0.2f) {
 			cornerwidth *= 0.2f;
@@ -1436,7 +1487,7 @@ Gfx *sightDrawMaian(Gfx *gdl, bool sighton)
 	gSPTri4(gdl++, 0, 4, 5, 5, 3, 6, 7, 6, 1, 4, 7, 2);
 
 	gdl = func0f0d49c8(gdl);
-	gdl = textSetPrimColour(gdl, 0x00ff0028);
+	gdl = textSetPrimColour(gdl, SIGHT_COLOUR);
 
 	// Draw border over inner points
 	gDPHudRectangle(gdl++, x - 4, y - 4, x - 4, y + 4); // left
@@ -1464,20 +1515,25 @@ Gfx *sightDrawTarget(Gfx *gdl)
 	mainOverrideVariable("sout", &var80070f9c);
 	mainOverrideVariable("sin", &var80070fa0);
 
-	gdl = textSetPrimColour(gdl, 0x00ff0028);
+	gdl = textSetPrimColour(gdl, SIGHT_COLOUR);
 
 #ifndef PLATFORM_N64
 	gSPSetExtraGeometryModeEXT(gdl++, G_ASPECT_CENTER_EXT);
+	if (SIGHT_SCALE == 0) {
+		// Draw single rectangle to preserve intended opacity
+		gDPHudRectangle(gdl++, x, y, x, y);
+	} else
 #endif
-
-	gDPHudRectangle(gdl++, x + 2, y + 0, x + 6, y + 0);
-	gDPHudRectangle(gdl++, x + 2, y + 0, x + 4, y + 0);
-	gDPHudRectangle(gdl++, x - 6, y + 0, x - 2, y + 0);
-	gDPHudRectangle(gdl++, x - 4, y + 0, x - 2, y + 0);
-	gDPHudRectangle(gdl++, x + 0, y + 2, x + 0, y + 6);
-	gDPHudRectangle(gdl++, x + 0, y + 2, x + 0, y + 4);
-	gDPHudRectangle(gdl++, x + 0, y - 6, x + 0, y - 2);
-	gDPHudRectangle(gdl++, x + 0, y - 4, x + 0, y - 2);
+	{
+		gDPHudRectangle(gdl++, x + 1 * SIGHT_SCALE, y + 0 * SIGHT_SCALE, x + 3 * SIGHT_SCALE, y + 0 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x + 1 * SIGHT_SCALE, y + 0 * SIGHT_SCALE, x + 2 * SIGHT_SCALE, y + 0 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x - 3 * SIGHT_SCALE, y + 0 * SIGHT_SCALE, x - 1 * SIGHT_SCALE, y + 0 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x - 2 * SIGHT_SCALE, y + 0 * SIGHT_SCALE, x - 1 * SIGHT_SCALE, y + 0 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x + 0 * SIGHT_SCALE, y + 1 * SIGHT_SCALE, x + 0 * SIGHT_SCALE, y + 3 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x + 0 * SIGHT_SCALE, y + 1 * SIGHT_SCALE, x + 0 * SIGHT_SCALE, y + 2 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x + 0 * SIGHT_SCALE, y - 3 * SIGHT_SCALE, x + 0 * SIGHT_SCALE, y - 1 * SIGHT_SCALE);
+		gDPHudRectangle(gdl++, x + 0 * SIGHT_SCALE, y - 2 * SIGHT_SCALE, x + 0 * SIGHT_SCALE, y - 1 * SIGHT_SCALE);
+	}
 
 #ifndef PLATFORM_N64
 	gSPClearExtraGeometryModeEXT(gdl++, G_ASPECT_CENTER_EXT);
@@ -1525,6 +1581,13 @@ Gfx *sightDraw(Gfx *gdl, bool sighton, s32 sight)
 	if (PLAYERCOUNT() >= 2 && g_Vars.coopplayernum < 0 && g_Vars.antiplayernum < 0) {
 		sight = SIGHT_DEFAULT;
 	}
+
+#ifndef PLATFORM_N64
+	if (g_Vars.currentplayer->bondhealth <= 0.0f) {
+		// Hide crosshair during death animation
+		sight = SIGHT_NONE;
+	}
+#endif
 
 	sightTick(sighton);
 

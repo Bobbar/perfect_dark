@@ -24,6 +24,7 @@ u64 sysGetMicroseconds(void);
 
 void sysFatalError(const char *fmt, ...) __attribute__((noreturn));
 
+s32 sysLogIsOpen(void);
 void sysLogPrintf(s32 level, const char *fmt, ...);
 
 void sysGetExecutablePath(char *outPath, const u32 outLen);
@@ -32,6 +33,12 @@ void sysGetHomePath(char *outPath, const u32 outLen);
 void *sysMemAlloc(const u32 size);
 void *sysMemZeroAlloc(const u32 size);
 void sysMemFree(void *ptr);
+
+// hns is specified in 100ns units
+void sysSleep(const s64 hns);
+
+// yield CPU if supported (e.g. during a busy loop)
+void sysCpuRelax(void);
 
 void crashInit(void);
 void crashShutdown(void);

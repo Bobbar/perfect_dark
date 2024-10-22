@@ -60,6 +60,40 @@ struct menuitem g_CtcOptionsMenuItems[] = {
 		MPOPTION_NOAUTOAIM,
 		menuhandlerMpCheckboxOption,
 	},
+#ifndef PLATFORM_N64
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LOCKABLEMINOR | MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"Start Armed",
+		MPOPTION_SPAWNWITHWEAPON,
+		menuhandlerMpCheckboxOption,
+	},
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LOCKABLEMINOR | MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"No Drug Blur",
+		MPOPTION_NODRUGBLUR,
+		menuhandlerMpCheckboxOption,
+	},
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LOCKABLEMINOR,
+		L_OPTIONS_257, // "Friendly Fire"
+		MPOPTION_FRIENDLYFIRE,
+		menuhandlerMpDisplayTeam,
+	},
+	{
+		MENUITEMTYPE_CHECKBOX,
+		0,
+		MENUITEMFLAG_LOCKABLEMINOR | MENUITEMFLAG_LITERAL_TEXT,
+		(uintptr_t)"No Player on Radar",
+		MPOPTION_NOPLAYERONRADAR,
+		menuhandlerMpCheckboxOption,
+	},
+#endif
 	{
 		MENUITEMTYPE_CHECKBOX,
 		0,

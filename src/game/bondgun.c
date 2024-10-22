@@ -190,6 +190,10 @@ char var800700bc[][10] = {
 	{ 'x','x','x'                         }, // "xxx"
 };
 
+#ifndef PLATFORM_N64
+s32 g_BgunGeMuzzleFlashes = false;
+#endif
+
 #if !MATCHING || VERSION >= VERSION_NTSC_1_0
 void bgunRumble(s32 handnum, s32 weaponnum)
 {
@@ -1911,7 +1915,17 @@ void bgun0f09a6f8(struct handweaponinfo *info, s32 handnum, struct hand *hand, s
 	if (func->flags & FUNCFLAG_NOMUZZLEFLASH) {
 		hand->flashon = false;
 	} else {
+#ifdef PLATFORM_N64
 		hand->flashon = true;
+#else
+		if (g_BgunGeMuzzleFlashes) {
+			if (func->type == INVENTORYFUNCTYPE_SHOOT_SINGLE || (hand->shotstotake & 1)) {
+				hand->flashon = true;
+			}
+		} else {
+			hand->flashon = true;
+		}
+#endif
 	}
 
 	bgunStartSlide(handnum);
@@ -10919,7 +10933,6 @@ void bgunRender(Gfx **gdlptr)
 	struct modelrenderdata renderdata = {NULL, true, 3}; // 10c
 	struct player *player;
 	s32 i;
-	const u32 wnorm = mtx00016dcc(0, 300);
 
 	static bool renderhand = true; // var800702dc
 
@@ -10985,7 +10998,7 @@ void bgunRender(Gfx **gdlptr)
 				gSPLookAt(gdl++, camGetLookAt());
 			}
 
-			gSPPerspNormalize(gdl++, wnorm);
+			gSPPerspNormalize(gdl++, mtx00016dcc(0, 300));
 
 			// There is support for guns having a TV screen on them
 			// but no guns have this model part so it's not used.
@@ -11160,17 +11173,7 @@ void bgunRender(Gfx **gdlptr)
 		}
 	}
 
-#ifndef PLATFORM_N64
-	// put the casings into the same Z range as the gun
-	gSPPerspNormalize(gdl++, wnorm);
-#endif
-
 	casingsRender(&gdl);
-
-#ifndef PLATFORM_N64
-	gSPPerspNormalize(gdl++, viGetPerspScale());
-#endif
-
 	zbufSwap();
 
 	gdl = zbufConfigureRdp(gdl);
@@ -11721,6 +11724,7 @@ s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromac
 {
 #ifndef PLATFORM_N64
 	const bool extcontrols = PLAYER_EXTCFG().extcontrols;
+	bool docontinue;
 #endif
 	switch (bgunGetWeaponNum(HAND_RIGHT)) {
 	case WEAPON_SNIPERRIFLE:
@@ -11745,7 +11749,6 @@ s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromac
 		}
 
 #ifndef PLATFORM_N64
-		bool docontinue;
 		if (extcontrols) {
 			docontinue = (ABS(usedowntime) < 0);
 		} else {
@@ -11767,6 +11770,18 @@ s32 bgunConsiderToggleGunFunction(s32 usedowntime, bool trigpressed, bool fromac
 		g_Vars.currentplayer->hands[HAND_RIGHT].activatesecondary = true;
 		return (extcontrols ? USETIMER_STOP : USETIMER_REPEAT);
 	case WEAPON_RCP120:
+#ifndef PLATFORM_N64
+		// very special alt-button handling for RCP-120's cloaking
+		if (!trigpressed && extcontrols && fromdedicatedbutton) {
+			if (g_Vars.currentplayer->devicesactive & DEVICE_CLOAKRCP120) {
+				g_Vars.currentplayer->devicesactive &= ~DEVICE_CLOAKRCP120;
+			} else {
+				g_Vars.currentplayer->devicesactive = (g_Vars.currentplayer->devicesactive & ~DEVICE_CLOAKRCP120) | DEVICE_CLOAKRCP120;
+			}
+			g_Vars.currentplayer->gunctrl.invertgunfunc = false;
+			return USETIMER_STOP;
+		}
+#endif
 	case WEAPON_LAPTOPGUN:
 	case WEAPON_DRAGON:
 	case WEAPON_REMOTEMINE:
@@ -12783,7 +12798,7 @@ Gfx *bgunDrawHud(Gfx *gdl)
 	gdl = text0f153628(gdl);
 
 #ifndef PLATFORM_N64
-	if (playercount < 2) {
+	if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 		gSPExtraGeometryModeEXT(gdl++, G_ASPECT_MODE_EXT, g_HudAlignModeR);
 	}
 #endif
@@ -13037,7 +13052,7 @@ Gfx *bgunDrawHud(Gfx *gdl)
 		}
 
 #ifndef PLATFORM_N64
-		if (playercount < 2) {
+		if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 			gSPExtraGeometryModeEXT(gdl++, G_ASPECT_MODE_EXT, g_HudAlignModeL);
 		}
 #endif
@@ -13077,7 +13092,7 @@ Gfx *bgunDrawHud(Gfx *gdl)
 		}
 
 #ifndef PLATFORM_N64
-		if (playercount < 2) {
+		if (playercount < 2 || (playercount == 2 && optionsGetScreenSplit() == SCREENSPLIT_HORIZONTAL)) {
 			gSPExtraGeometryModeEXT(gdl++, G_ASPECT_MODE_EXT, g_HudAlignModeR);
 		}
 #endif
